@@ -1,8 +1,8 @@
+import boa
 import pytest
-from moccasin.config import get_active_network
 from eth_account import Account
 from eth_utils import to_wei
-import boa
+from moccasin.config import get_active_network
 
 BALANCE = to_wei(10, "ether")
 

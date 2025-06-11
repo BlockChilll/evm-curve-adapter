@@ -3,9 +3,8 @@ Unit tests for the StableswapAdapter contract.
 Should be run with eth-forked network only
 """
 
-import pytest
 import boa
-
+import pytest
 from eth.codecs.abi.exceptions import EncodeError
 
 BASE_TYPE = 1

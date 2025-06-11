@@ -109,7 +109,7 @@ def register_pool(pool_address: address, zapper_address: address):
     # second optional argument must be set in raw_call
     success: bool = False
     response: Bytes[32] = b""
-    success, response = raw_call(    
+    success, response = raw_call(
         meta_registry.address,
         concat(
             method_id("is_registered(address,uint256)"),
@@ -117,9 +117,11 @@ def register_pool(pool_address: address, zapper_address: address):
             convert(0, bytes32),
         ),
         max_outsize=32,
-        revert_on_failure=False
+        revert_on_failure=False,
     )
-    assert success, "stableswap_adapter: pool is not registered in meta registry"
+    assert (
+        success
+    ), "stableswap_adapter: pool is not registered in meta registry"
 
     is_meta: bool = staticcall meta_registry.is_meta(pool_address)
     pool_gauge: address = staticcall meta_registry.get_gauge(pool_address)
@@ -162,6 +164,7 @@ def get_pool_info(pool_address: address) -> Pool:
     """
     return self.pool_registry[pool_address]
 
+
 @external
 @view
 def get_pools_count() -> uint256:
@@ -170,6 +173,7 @@ def get_pools_count() -> uint256:
     @return pools_count number of pools registered
     """
     return len(self.pool_registry_set)
+
 
 # ------------------------------------------------------------------
 #                             INTERNAL
