@@ -1,0 +1,62 @@
+[project]
+src = "src"
+out = "out"
+dot_env = ".env"
+name = "moccasin_project"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = ["snekmate"]
+save_abi_path = "abis"
+default_network_name = "eth-forked"
+
+[networks.eth-forked]
+fork = true
+url = "$MAINNET_RPC_URL"
+default_account_name = "anvil1"
+unsafe_password_file = "./pswd"
+
+[networks.contracts]
+meta_registry = { abi = "abis/meta_registry.json" }
+three_pool_contract = { abi = "abis/three_pool_contract.json" }
+three_pool_gauge = { abi = "abis/three_pool_gauge.json" }
+three_pool_lp_token = { abi = "abis/three_pool_lp_token.json" }
+musd_three_pool_contract = { abi = "abis/musd_three_pool_contract.json" }
+musd_three_pool_gauge = { abi = "abis/musd_three_pool_gauge.json" }
+musd_three_pool_lp_token = { abi = "abis/musd_three_pool_lp_token.json" }
+musd_three_pool_zapper = { abi = "abis/musd_three_pool_zapper.json" }
+
+[networks.contracts.stableswap_adapter]
+deployer_script = "script/deploy_stableswap_adapter.py"
+
+[networks.eth-forked.contracts]
+meta_registry = { address = "0xF98B45FA17DE75FB1aD0e7aFD971b0ca00e379fC" }
+three_pool_contract = { address = "0xbebc44782c7db0a1a60cb6fe97d0b483032ff1c7" }
+three_pool_gauge = { address = "0xbFcF63294aD7105dEa65aA58F8AE5BE2D9d0952A" }
+three_pool_lp_token = { address = "0x6c3F90f043a72FA612cbac8115EE7e52BDe6E490" }
+musd_three_pool_contract = { address = "0x8474DdbE98F5aA3179B3B3F5942D724aFcdec9f6" }
+musd_three_pool_gauge = { address = "0x5f626c30EC1215f4EdCc9982265E8b1F411D1352" }
+musd_three_pool_lp_token = { address = "0x1AEf73d49Dedc4b1778d0706583995958Dc862e6" }
+musd_three_pool_zapper = { address = "0x803A2B40c5a9BB2B86DD630B274Fa2A9202874C2" }
+
+# [networks.pyevm]
+# is_zksync = false
+
+# [networks.anvil]
+# url = "http://127.0.0.1:8545"
+# prompt_live = false
+# save_to_db = false
+# chain_id = 31337
+
+# [networks.sepolia]
+# url = "https://ethereum-sepolia-rpc.publicnode.com"
+# chain_id = 11155111
+
+# [networks.zksync-sepolia]
+# url = "https://sepolia.era.zksync.dev"
+# chain_id = 300
+# is_zksync = true
+# prompt_live = true
+
+# You can view all configuration options at https://cyfrin.github.io/moccasin/all_moccasin_toml_parameters.html

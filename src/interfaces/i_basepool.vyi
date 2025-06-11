@@ -1,0 +1,65 @@
+# pragma version 0.4.1
+# @license MIT
+
+"""
+@notice common interface for all stableswap base pools
+"""
+
+
+@external
+@view
+def coins(i: uint256) -> address:
+    ...
+
+
+@external
+@view
+def get_virtual_price() -> uint256:
+    ...
+
+
+@external
+@view
+def calc_token_amount(amounts: DynArray[uint256, 5], deposit: bool) -> uint256:
+    ...
+
+
+@external
+@view
+def calc_withdraw_one_coin(_token_amount: uint256, i: int128) -> uint256:
+    ...
+
+
+@external
+@view
+def fee() -> uint256:
+    ...
+
+
+@external
+@view
+def get_dy(i: int128, j: int128, dx: uint256) -> uint256:
+    ...
+
+
+@external
+@view
+def get_dy_underlying(i: int128, j: int128, dx: uint256) -> uint256:
+    ...
+
+
+@external
+def exchange(i: int128, j: int128, dx: uint256, min_dy: uint256):
+    ...
+
+
+@external
+def add_liquidity(amounts: DynArray[uint256, 5], min_mint_amount: uint256):
+    ...
+
+
+@external
+def remove_liquidity_one_coin(
+    _token_amount: uint256, i: int128, min_amount: uint256
+):
+    ...

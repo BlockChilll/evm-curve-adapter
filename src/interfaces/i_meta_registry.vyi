@@ -1,0 +1,30 @@
+# pragma version 0.4.1
+# @license MIT
+
+"""
+@notice Meta registry interface
+"""
+
+
+@external
+@view
+def get_gauge(_pool: address) -> address:
+    ...
+
+
+@external
+@view
+def is_meta(_pool: address) -> bool:
+    ...
+
+
+@external
+@view
+def is_registered(_pool: address, _handler_id: uint256 = 0) -> bool:
+    ...
+
+
+@external
+@view
+def get_lp_token(_pool: address, _handler_id: uint256 = 0) -> address:
+    ...

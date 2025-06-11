@@ -1,0 +1,58 @@
+# pragma version 0.4.1
+# @license MIT
+
+"""
+@notice common interface for all stableswap metapools
+"""
+
+
+@external
+def add_liquidity(
+    amounts: DynArray[uint256, 5], min_mint_amount: uint256
+) -> uint256:
+    ...
+
+
+@external
+def remove_liquidity(
+    _amount: uint256, min_amounts: DynArray[uint256, 5]
+) -> DynArray[uint256, 5]:
+    ...
+
+
+@external
+def remove_liquidity_one_coin(
+    _token_amount: uint256, i: int128, min_amount: uint256
+) -> uint256:
+    ...
+
+
+@external
+def remove_liquidity_imbalance(
+    amounts: DynArray[uint256, 5], max_burn_amount: uint256
+) -> uint256:
+    ...
+
+
+@external
+@view
+def calc_withdraw_one_coin(_token_amount: uint256, i: int128) -> uint256:
+    ...
+
+
+@external
+@view
+def calc_token_amount(amounts: DynArray[uint256, 5], deposit: bool) -> uint256:
+    ...
+
+
+@external
+@view
+def base_pool() -> address:
+    ...
+
+
+@external
+@view
+def coins(i: uint256) -> address:
+    ...
