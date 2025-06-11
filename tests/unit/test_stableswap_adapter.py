@@ -62,3 +62,14 @@ def test_cannot_set_zero_zap_address_for_meta_pool(stableswap_adapter, alice, mu
     with boa.env.prank(alice):
         with boa.reverts("stableswap_adapter: zapper address is required for metapools"):
             stableswap_adapter.register_pool(musd_three_pool_contract, ZERO)
+
+def test_emits_register_log(stableswap_adapter, alice, three_pool_contract, three_pool_gauge, three_pool_lp_token):
+    with boa.env.prank(alice):
+        stableswap_adapter.register_pool(three_pool_contract, ZERO)
+
+        logs = stableswap_adapter.get_logs()
+        assert logs[0].pool == three_pool_contract.address
+        assert logs[0].pool_type == BASE_TYPE
+        assert logs[0].gauge == three_pool_gauge.address
+        assert logs[0].zapper == ZERO
+        assert logs[0].lp_token == three_pool_lp_token.address
