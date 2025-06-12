@@ -276,7 +276,7 @@ def add_liquidity(
 
 # @external
 # @nonreentrant
-# def name(_name: type):
+# def remove(_name: type):
 
 
 # ------------------------------------------------------------------

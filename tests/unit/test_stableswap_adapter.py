@@ -173,7 +173,7 @@ def test_emits_add_liquidity_log(stableswap_adapter, alice, musd_three_pool_cont
 #            GET_LP_AMOUNT_AFTER_DEPOSIT/WITHDRAW FUNCTION TESTS
 # ------------------------------------------------------------------
 
-def test_get_lp_amount_after_deposit_successfully(stableswap_adapter, alice, three_pool_contract):
+def test_get_lp_amount_after_deposit_successfully(stableswap_adapter, alice, three_pool_contract, musd_three_pool_contract, musd_three_pool_gauge):
     register_three_pool(stableswap_adapter, alice, three_pool_contract)
 
     AMOUNT_TO_ADD: int = int(100e18) # DAI
@@ -181,11 +181,13 @@ def test_get_lp_amount_after_deposit_successfully(stableswap_adapter, alice, thr
     AMOUNT_TO_ADD_3: int = int(300e6) # USDT
     
     lp_amount: int = stableswap_adapter.get_lp_amount_after_deposit(three_pool_contract, [AMOUNT_TO_ADD, AMOUNT_TO_ADD_2, AMOUNT_TO_ADD_3])
-
-    print(f"lp_amount: {lp_amount}") # ~577088725162973830403 
     assert lp_amount > 0
 
-def test_get_lp_amount_after_withdraw_successfully(stableswap_adapter, alice, three_pool_contract):
+    register_musd_three_pool(stableswap_adapter, alice, musd_three_pool_contract, musd_three_pool_gauge)
+    lp_amount_2: int = stableswap_adapter.get_lp_amount_after_deposit(musd_three_pool_contract, [AMOUNT_TO_ADD, AMOUNT_TO_ADD_2])
+    assert lp_amount_2 > 0
+
+def test_get_lp_amount_after_withdraw_successfully(stableswap_adapter, alice, three_pool_contract, musd_three_pool_contract, musd_three_pool_gauge):
     register_three_pool(stableswap_adapter, alice, three_pool_contract)
 
     AMOUNT_TO_ADD: int = int(100e18) # DAI
@@ -193,10 +195,11 @@ def test_get_lp_amount_after_withdraw_successfully(stableswap_adapter, alice, th
     AMOUNT_TO_ADD_3: int = int(300e6) # USDT
     
     lp_amount: int = stableswap_adapter.get_lp_amount_after_withdraw(three_pool_contract, [AMOUNT_TO_ADD, AMOUNT_TO_ADD_2, AMOUNT_TO_ADD_3])
-
-    print(f"lp_amount: {lp_amount}") # ~577088692382999621168 
     assert lp_amount > 0
-    
+
+    register_musd_three_pool(stableswap_adapter, alice, musd_three_pool_contract, musd_three_pool_gauge)
+    lp_amount_2: int = stableswap_adapter.get_lp_amount_after_withdraw(musd_three_pool_contract, [AMOUNT_TO_ADD, AMOUNT_TO_ADD_2])
+    assert lp_amount_2 > 0
 
 
 # ------------------------------------------------------------------
