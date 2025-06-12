@@ -16,7 +16,9 @@ MUSD_WHALE = "0x30647a72Dc82d7Fbb1123EA74716aB8A317Eac19"
 THREE_CRV_WHALE = "0xe74b28c2eAe8679e3cCc3a94d5d0dE83CCB84705"
 
 
-# register_pool function
+# ------------------------------------------------------------------
+#                      REGISTER_POOL FUNCTION TESTS
+# ------------------------------------------------------------------
 
 def test_stableswap_adapter_deploy(stableswap_adapter, alice):
     assert stableswap_adapter.address is not None
@@ -80,7 +82,9 @@ def test_emits_register_log(stableswap_adapter, alice, three_pool_contract, thre
     assert logs[0].n_coins == 3
 
 
-# add_liquidity function
+# ------------------------------------------------------------------
+#                      ADD_LIQUIDITY FUNCTION TESTS
+# ------------------------------------------------------------------
 
 def test_cannot_add_liquidity_with_wrong_coins_amount(stableswap_adapter, alice, three_pool_contract):
     register_three_pool(stableswap_adapter, alice, three_pool_contract)
@@ -164,10 +168,30 @@ def test_emits_add_liquidity_log(stableswap_adapter, alice, musd_three_pool_cont
     assert log.amounts == [AMOUNT_TO_ADD, AMOUNT_TO_ADD_2]
     assert log.min_mint_amount == 0
     assert log.mint_amount == mint_amount
+
+# ------------------------------------------------------------------
+#            GET_LP_AMOUNT_AFTER_DEPOSIT FUNCTION TESTS
+# ------------------------------------------------------------------
+
+def test_get_lp_amount_after_deposit_successfully(stableswap_adapter, alice, three_pool_contract):
+    register_three_pool(stableswap_adapter, alice, three_pool_contract)
+
+    AMOUNT_TO_ADD: int = int(100e18) # DAI
+    AMOUNT_TO_ADD_2: int = int(200e6) # USDC
+    AMOUNT_TO_ADD_3: int = int(300e6) # USDT
+    
+    lp_amount: int = stableswap_adapter.get_lp_amount_after_deposit(three_pool_contract, [AMOUNT_TO_ADD, AMOUNT_TO_ADD_2, AMOUNT_TO_ADD_3])
+
+    print(f"lp_amount: {lp_amount}") # 577088725162973830403 
+    assert lp_amount == 577088725162973830403
+
     
 
 
-# util functions
+# ------------------------------------------------------------------
+#                      UTIL FUNCTIONS
+# ------------------------------------------------------------------
+
 def register_three_pool(stableswap_adapter, alice, three_pool_contract):
     with boa.env.prank(alice):
         stableswap_adapter.register_pool(three_pool_contract, ZERO)

@@ -185,12 +185,8 @@ def add_liquidity(
 
     pool_info: Pool = self.pool_registry[pool_address]
 
-    assert (
-        len(amounts) == pool_info.n_coins
-    ), "stableswap_adapter: invalid number of amounts"
-    assert (
-        pool_address == pool_info.contract
-    ), "stableswap_adapter: pool address mismatch"
+    self._check_are_amounts_valid(pool_address, amounts)
+    self._check_is_pool_valid(pool_address)
 
     coins: address[MAX_COINS] = staticcall meta_registry.get_coins(
         pool_address
@@ -285,6 +281,19 @@ def add_liquidity(
 
 @external
 @view
+def get_lp_amount_after_deposit(pool_address: address, amounts: DynArray[uint256, MAX_COINS]) -> uint256:
+    """
+    @notice Get the amount of lp tokens after depositing amounts
+    @param pool_address address of the pool contract
+    @param amounts array of amounts of coins to add
+    @return lp_amount amount of lp tokens after depositing amounts
+    """
+    self._check_is_pool_valid(pool_address)
+    self._check_are_amounts_valid(pool_address, amounts)
+    return stableswap_liquidity._get_lp_amount_after_deposit(pool_address, amounts)
+
+@external
+@view
 def get_pool_info(pool_address: address) -> Pool:
     """
     @notice Get the pool info for a given pool address
@@ -308,3 +317,31 @@ def get_pools_count() -> uint256:
 #                             INTERNAL
 # ------------------------------------------------------------------
 
+@internal
+@view
+def _check_is_pool_valid(pool_address: address):
+    """
+    @notice Check if a pool is valid
+    @param pool_address address of the pool contract
+    @dev This function will check if the pool is registered in the adapter and if the pool address matches the pool contract address
+    """
+    pool_info: Pool = self.pool_registry[pool_address]
+
+    assert (
+        pool_address == pool_info.contract
+    ), "stableswap_adapter: pool address mismatch"
+
+@internal
+@view
+def _check_are_amounts_valid(pool_address: address, amounts: DynArray[uint256, MAX_COINS]):
+    """
+    @notice Check if the amounts are valid
+    @param pool_address address of the pool contract
+    @param amounts array of amounts of coins to add
+    @dev This function will check if the amounts are valid
+    """
+    pool_info: Pool = self.pool_registry[pool_address]
+
+    assert (
+        len(amounts) == pool_info.n_coins
+    ), "stableswap_adapter: invalid number of amounts"
