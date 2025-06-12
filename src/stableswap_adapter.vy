@@ -274,6 +274,10 @@ def add_liquidity(
 
     return mint_amount
 
+# @external
+# @nonreentrant
+# def name(_name: type):
+
 
 # ------------------------------------------------------------------
 #                               VIEW
@@ -290,7 +294,20 @@ def get_lp_amount_after_deposit(pool_address: address, amounts: DynArray[uint256
     """
     self._check_is_pool_valid(pool_address)
     self._check_are_amounts_valid(pool_address, amounts)
-    return stableswap_liquidity._get_lp_amount_after_deposit(pool_address, amounts)
+    return stableswap_liquidity._get_lp_amount_after_deposit(pool_address, amounts, True)
+
+@external
+@view
+def get_lp_amount_after_withdraw(pool_address: address, amounts: DynArray[uint256, MAX_COINS]) -> uint256:
+    """
+    @notice Get the amount of lp tokens after withdrawing amounts
+    @param pool_address address of the pool contract
+    @param amounts array of amounts of coins to withdraw
+    @return lp_amount amount of lp tokens after withdrawing amounts
+    """
+    self._check_is_pool_valid(pool_address)
+    self._check_are_amounts_valid(pool_address, amounts)
+    return stableswap_liquidity._get_lp_amount_after_deposit(pool_address, amounts, False)
 
 @external
 @view
@@ -301,7 +318,6 @@ def get_pool_info(pool_address: address) -> Pool:
     @return pool_info Pool struct containing pool information
     """
     return self.pool_registry[pool_address]
-
 
 @external
 @view

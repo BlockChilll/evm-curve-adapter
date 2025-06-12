@@ -161,7 +161,7 @@ def _add_liquidity_8(pool: address, amounts: uint256[8], min_mint_amount: uint25
 
 @internal
 @view
-def _get_lp_amount_after_deposit(pool: address, amounts: DynArray[uint256, MAX_COINS]) -> uint256:
+def _get_lp_amount_after_deposit(pool: address, amounts: DynArray[uint256, MAX_COINS], deposit: bool) -> uint256:
     """
     @notice Get the amount of lp tokens after depositing amounts
     @param pool address of the pool contract
@@ -172,43 +172,43 @@ def _get_lp_amount_after_deposit(pool: address, amounts: DynArray[uint256, MAX_C
         amounts_2: uint256[2] = [0, 0]
         for i: uint256 in range(min(len(amounts), 2), bound=2):
             amounts_2[i] = amounts[i]
-        return self._get_lp_amount_after_deposit_2(pool, amounts_2)
+        return self._get_lp_amount_after_deposit_2(pool, amounts_2, deposit)
 
     elif len(amounts) == 3:
         amounts_3: uint256[3] = [0, 0, 0]
         for i: uint256 in range(min(len(amounts), 3), bound=3):
             amounts_3[i] = amounts[i]
-        return self._get_lp_amount_after_deposit_3(pool, amounts_3)
+        return self._get_lp_amount_after_deposit_3(pool, amounts_3, deposit)
 
     elif len(amounts) == 4:
         amounts_4: uint256[4] = [0, 0, 0, 0]
         for i: uint256 in range(min(len(amounts), 4), bound=4):
             amounts_4[i] = amounts[i]
-        return self._get_lp_amount_after_deposit_4(pool, amounts_4)
+        return self._get_lp_amount_after_deposit_4(pool, amounts_4, deposit)
 
     elif len(amounts) == 5:
         amounts_5: uint256[5] = [0, 0, 0, 0, 0]
         for i: uint256 in range(min(len(amounts), 5), bound=5):
             amounts_5[i] = amounts[i]
-        return self._get_lp_amount_after_deposit_5(pool, amounts_5)
+        return self._get_lp_amount_after_deposit_5(pool, amounts_5, deposit)
 
     elif len(amounts) == 6:
         amounts_6: uint256[6] = [0, 0, 0, 0, 0, 0]
         for i: uint256 in range(min(len(amounts), 6), bound=6):
             amounts_6[i] = amounts[i]
-        return self._get_lp_amount_after_deposit_6(pool, amounts_6)
+        return self._get_lp_amount_after_deposit_6(pool, amounts_6, deposit)
 
     elif len(amounts) == 7:
         amounts_7: uint256[7] = [0, 0, 0, 0, 0, 0, 0]
         for i: uint256 in range(min(len(amounts), 7), bound=7):
             amounts_7[i] = amounts[i]
-        return self._get_lp_amount_after_deposit_7(pool, amounts_7)
+        return self._get_lp_amount_after_deposit_7(pool, amounts_7, deposit)
 
     elif len(amounts) == 8:
         amounts_8: uint256[8] = [0, 0, 0, 0, 0, 0, 0, 0]
         for i: uint256 in range(min(len(amounts), 8), bound=8):
             amounts_8[i] = amounts[i]
-        return self._get_lp_amount_after_deposit_8(pool, amounts_8)
+        return self._get_lp_amount_after_deposit_8(pool, amounts_8, deposit)
 
     else:
         raise "stableswap_adapter: invalid number of amounts"
@@ -216,13 +216,13 @@ def _get_lp_amount_after_deposit(pool: address, amounts: DynArray[uint256, MAX_C
 
 @internal
 @view
-def _get_lp_amount_after_deposit_2(pool: address, amounts: uint256[2]) -> uint256:
+def _get_lp_amount_after_deposit_2(pool: address, amounts: uint256[2], deposit: bool) -> uint256:
     """
     @notice Get the amount of lp tokens after depositing 2 coins
     """
     response: Bytes[32] = raw_call(
         pool,
-        abi_encode(amounts, True, method_id=method_id("calc_token_amount(uint256[2],bool)")),
+        abi_encode(amounts, deposit, method_id=method_id("calc_token_amount(uint256[2],bool)")),
         max_outsize=32,
         is_static_call=True,
     )
@@ -230,13 +230,13 @@ def _get_lp_amount_after_deposit_2(pool: address, amounts: uint256[2]) -> uint25
 
 @internal
 @view
-def _get_lp_amount_after_deposit_3(pool: address, amounts: uint256[3]) -> uint256:
+def _get_lp_amount_after_deposit_3(pool: address, amounts: uint256[3], deposit: bool) -> uint256:
     """
     @notice Get the amount of lp tokens after depositing 3 coins
     """
     response: Bytes[32] = raw_call(
         pool,
-        abi_encode(amounts, True, method_id=method_id("calc_token_amount(uint256[3],bool)")),
+        abi_encode(amounts, deposit, method_id=method_id("calc_token_amount(uint256[3],bool)")),
         max_outsize=32,
         is_static_call=True,
     )
@@ -244,13 +244,13 @@ def _get_lp_amount_after_deposit_3(pool: address, amounts: uint256[3]) -> uint25
 
 @internal
 @view
-def _get_lp_amount_after_deposit_4(pool: address, amounts: uint256[4]) -> uint256:
+def _get_lp_amount_after_deposit_4(pool: address, amounts: uint256[4], deposit: bool) -> uint256:
     """
     @notice Get the amount of lp tokens after depositing 4 coins
     """
     response: Bytes[32] = raw_call(
         pool,
-        abi_encode(amounts, True, method_id=method_id("calc_token_amount(uint256[4],bool)")),
+        abi_encode(amounts, deposit, method_id=method_id("calc_token_amount(uint256[4],bool)")),
         max_outsize=32,
         is_static_call=True,
     )
@@ -258,13 +258,13 @@ def _get_lp_amount_after_deposit_4(pool: address, amounts: uint256[4]) -> uint25
 
 @internal
 @view
-def _get_lp_amount_after_deposit_5(pool: address, amounts: uint256[5]) -> uint256:
+def _get_lp_amount_after_deposit_5(pool: address, amounts: uint256[5], deposit: bool) -> uint256:
     """
     @notice Get the amount of lp tokens after depositing 5 coins
     """
     response: Bytes[32] = raw_call(
         pool,
-        abi_encode(amounts, True, method_id=method_id("calc_token_amount(uint256[5],bool)")),
+        abi_encode(amounts, deposit, method_id=method_id("calc_token_amount(uint256[5],bool)")),
         max_outsize=32,
         is_static_call=True,
     )
@@ -272,13 +272,13 @@ def _get_lp_amount_after_deposit_5(pool: address, amounts: uint256[5]) -> uint25
 
 @internal
 @view
-def _get_lp_amount_after_deposit_6(pool: address, amounts: uint256[6]) -> uint256:
+def _get_lp_amount_after_deposit_6(pool: address, amounts: uint256[6], deposit: bool) -> uint256:
     """
     @notice Get the amount of lp tokens after depositing 6 coins
     """
     response: Bytes[32] = raw_call(
         pool,
-        abi_encode(amounts, True, method_id=method_id("calc_token_amount(uint256[6],bool)")),
+        abi_encode(amounts, deposit, method_id=method_id("calc_token_amount(uint256[6],bool)")),
         max_outsize=32,
         is_static_call=True,
     )
@@ -286,13 +286,13 @@ def _get_lp_amount_after_deposit_6(pool: address, amounts: uint256[6]) -> uint25
 
 @internal
 @view
-def _get_lp_amount_after_deposit_7(pool: address, amounts: uint256[7]) -> uint256:
+def _get_lp_amount_after_deposit_7(pool: address, amounts: uint256[7], deposit: bool) -> uint256:
     """
     @notice Get the amount of lp tokens after depositing 7 coins
     """ 
     response: Bytes[32] = raw_call(
         pool,
-        abi_encode(amounts, True, method_id=method_id("calc_token_amount(uint256[7],bool)")),
+        abi_encode(amounts, deposit, method_id=method_id("calc_token_amount(uint256[7],bool)")),
         max_outsize=32,
         is_static_call=True,
     )
@@ -300,13 +300,13 @@ def _get_lp_amount_after_deposit_7(pool: address, amounts: uint256[7]) -> uint25
 
 @internal
 @view
-def _get_lp_amount_after_deposit_8(pool: address, amounts: uint256[8]) -> uint256:
+def _get_lp_amount_after_deposit_8(pool: address, amounts: uint256[8], deposit: bool) -> uint256:
     """
     @notice Get the amount of lp tokens after depositing 8 coins
     """
     response: Bytes[32] = raw_call(
         pool,
-        abi_encode(amounts, True, method_id=method_id("calc_token_amount(uint256[8],bool)")),
+        abi_encode(amounts, deposit, method_id=method_id("calc_token_amount(uint256[8],bool)")),
         max_outsize=32,
         is_static_call=True,
     )

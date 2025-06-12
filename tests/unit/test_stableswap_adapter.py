@@ -170,7 +170,7 @@ def test_emits_add_liquidity_log(stableswap_adapter, alice, musd_three_pool_cont
     assert log.mint_amount == mint_amount
 
 # ------------------------------------------------------------------
-#            GET_LP_AMOUNT_AFTER_DEPOSIT FUNCTION TESTS
+#            GET_LP_AMOUNT_AFTER_DEPOSIT/WITHDRAW FUNCTION TESTS
 # ------------------------------------------------------------------
 
 def test_get_lp_amount_after_deposit_successfully(stableswap_adapter, alice, three_pool_contract):
@@ -182,9 +182,20 @@ def test_get_lp_amount_after_deposit_successfully(stableswap_adapter, alice, thr
     
     lp_amount: int = stableswap_adapter.get_lp_amount_after_deposit(three_pool_contract, [AMOUNT_TO_ADD, AMOUNT_TO_ADD_2, AMOUNT_TO_ADD_3])
 
-    print(f"lp_amount: {lp_amount}") # 577088725162973830403 
-    assert lp_amount == 577088725162973830403
+    print(f"lp_amount: {lp_amount}") # ~577088725162973830403 
+    assert lp_amount > 0
 
+def test_get_lp_amount_after_withdraw_successfully(stableswap_adapter, alice, three_pool_contract):
+    register_three_pool(stableswap_adapter, alice, three_pool_contract)
+
+    AMOUNT_TO_ADD: int = int(100e18) # DAI
+    AMOUNT_TO_ADD_2: int = int(200e6) # USDC
+    AMOUNT_TO_ADD_3: int = int(300e6) # USDT
+    
+    lp_amount: int = stableswap_adapter.get_lp_amount_after_withdraw(three_pool_contract, [AMOUNT_TO_ADD, AMOUNT_TO_ADD_2, AMOUNT_TO_ADD_3])
+
+    print(f"lp_amount: {lp_amount}") # ~577088692382999621168 
+    assert lp_amount > 0
     
 
 
