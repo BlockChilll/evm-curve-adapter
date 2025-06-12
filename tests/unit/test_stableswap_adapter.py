@@ -143,6 +143,27 @@ def test_can_add_liquidity_successfully_meta_pool(stableswap_adapter, alice, mus
     assert three_crv.balanceOf(alice) == BALANCE - AMOUNT_TO_ADD_2
 
     assert musd_three_pool_lp_token.balanceOf(alice) == mint_amount
+
+def test_emits_add_liquidity_log(stableswap_adapter, alice, musd_three_pool_contract, musd_three_pool_gauge, musd_three_pool_lp_token, musd, three_crv):
+    register_musd_three_pool(stableswap_adapter, alice, musd_three_pool_contract, musd_three_pool_gauge)
+    mint_musd_three_pool_tokens(alice, musd, three_crv)
+
+    AMOUNT_TO_ADD: int = int(100e18) # MUSD
+    AMOUNT_TO_ADD_2: int = int(200e18) # THREE_CRV
+
+    with boa.env.prank(alice):
+        musd.approve(stableswap_adapter, AMOUNT_TO_ADD)
+        three_crv.approve(stableswap_adapter, AMOUNT_TO_ADD_2)
+
+        mint_amount: int = stableswap_adapter.add_liquidity(musd_three_pool_contract, [AMOUNT_TO_ADD, AMOUNT_TO_ADD_2], 0)
+
+    logs = stableswap_adapter.get_logs()
+    log = logs[len(logs) - 1]
+    
+    assert log.pool == musd_three_pool_contract.address
+    assert log.amounts == [AMOUNT_TO_ADD, AMOUNT_TO_ADD_2]
+    assert log.min_mint_amount == 0
+    assert log.mint_amount == mint_amount
     
 
 
