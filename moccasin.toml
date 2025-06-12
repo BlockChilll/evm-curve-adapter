@@ -16,6 +16,7 @@ fork = true
 url = "$MAINNET_RPC_URL"
 default_account_name = "anvil1"
 unsafe_password_file = "./pswd"
+block_identifier=22687201
 
 [networks.contracts]
 meta_registry = { abi = "abis/meta_registry.json" }
@@ -26,6 +27,11 @@ musd_three_pool_contract = { abi = "abis/musd_three_pool_contract.json" }
 musd_three_pool_gauge = { abi = "abis/musd_three_pool_gauge.json" }
 musd_three_pool_lp_token = { abi = "abis/musd_three_pool_lp_token.json" }
 musd_three_pool_zapper = { abi = "abis/musd_three_pool_zapper.json" }
+DAI = { abi = "abis/dai.json" }
+USDC = { abi = "abis/usdc.json" }
+USDT = { abi = "abis/usdt.json" }
+MUSD = { abi = "abis/musd.json" }
+THREE_CRV = { abi = "abis/3crv.json" }
 
 [networks.contracts.stableswap_adapter]
 deployer_script = "script/deploy_stableswap_adapter.py"
@@ -39,6 +45,12 @@ musd_three_pool_contract = { address = "0x8474DdbE98F5aA3179B3B3F5942D724aFcdec9
 musd_three_pool_gauge = { address = "0x5f626c30EC1215f4EdCc9982265E8b1F411D1352" }
 musd_three_pool_lp_token = { address = "0x1AEf73d49Dedc4b1778d0706583995958Dc862e6" }
 musd_three_pool_zapper = { address = "0x803A2B40c5a9BB2B86DD630B274Fa2A9202874C2" }
+DAI = { address = "0x6B175474E89094C44Da98b954EedeAC495271d0F" }
+USDC = { address = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48" }
+USDT = { address = "0xdAC17F958D2ee523a2206206994597C13D831ec7" }
+MUSD = { address = "0xe2f2a5C287993345a840Db3B0845fbC70f5935a5" }
+THREE_CRV = { address = "0x6c3F90f043a72FA612cbac8115EE7e52BDe6E490" }
+
 
 # [networks.pyevm]
 # is_zksync = false

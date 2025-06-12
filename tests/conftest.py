@@ -4,7 +4,8 @@ from eth_account import Account
 from eth_utils import to_wei
 from moccasin.config import get_active_network
 
-BALANCE = to_wei(10, "ether")
+BALANCE = to_wei(1000, "ether")
+ZERO = "0x0000000000000000000000000000000000000000"
 
 # ------------------------------------------------------------------
 #                          SESSION SCOPE
@@ -47,6 +48,26 @@ def musd_three_pool_zapper(active_network):
     return active_network.manifest_named("musd_three_pool_zapper")
 
 @pytest.fixture(scope="session")
+def dai(active_network):
+    return active_network.manifest_named("DAI")
+
+@pytest.fixture(scope="session")
+def usdc(active_network):
+    return active_network.manifest_named("USDC")
+
+@pytest.fixture(scope="session")
+def usdt(active_network):
+    return active_network.manifest_named("USDT")
+
+@pytest.fixture(scope="session")
+def musd(active_network):
+    return active_network.manifest_named("MUSD")
+
+@pytest.fixture(scope="session")
+def three_crv(active_network):
+    return active_network.manifest_named("THREE_CRV")
+
+@pytest.fixture(scope="session")
 def alice():
     entropy = 13
     account = Account.create(entropy)
@@ -61,5 +82,3 @@ def alice():
 def stableswap_adapter(active_network, alice):
     with boa.env.prank(alice):
         return active_network.manifest_named("stableswap_adapter")
-
-

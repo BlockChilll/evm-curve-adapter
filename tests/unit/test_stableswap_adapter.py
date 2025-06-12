@@ -4,13 +4,17 @@ Should be run with eth-forked network only
 """
 
 import boa
-import pytest
-from eth.codecs.abi.exceptions import EncodeError
+from eth_utils import to_wei, from_wei
 
 BASE_TYPE = 1
 META_TYPE = 2
 ZERO = "0x0000000000000000000000000000000000000000"
 RANDOM_ADDRESS = boa.env.generate_address("random")
+BALANCE = to_wei(1000, "ether")
+DAI_WHALE = "0xf6e72Db5454dd049d0788e411b06CfAF16853042"
+MUSD_WHALE = "0x30647a72Dc82d7Fbb1123EA74716aB8A317Eac19"
+THREE_CRV_WHALE = "0xe74b28c2eAe8679e3cCc3a94d5d0dE83CCB84705"
+
 
 # register_pool function
 
@@ -30,23 +34,25 @@ def test_cannot_set_pool_not_owner(stableswap_adapter):
         stableswap_adapter.register_pool(RANDOM_ADDRESS, ZERO)
 
 def test_cannot_set_pool_already_registered(stableswap_adapter, alice, three_pool_contract):
+    register_three_pool(stableswap_adapter, alice, three_pool_contract)
+
     with boa.env.prank(alice):
-        stableswap_adapter.register_pool(three_pool_contract, ZERO)
         with boa.reverts("stableswap_adapter: pool already registered"):
             stableswap_adapter.register_pool(three_pool_contract, ZERO)
 
 def test_set_pool_data_successfully(stableswap_adapter, alice, three_pool_contract, three_pool_gauge, three_pool_lp_token, musd_three_pool_contract, musd_three_pool_gauge, musd_three_pool_lp_token, musd_three_pool_zapper):
+    register_three_pool(stableswap_adapter, alice, three_pool_contract)
+    assert stableswap_adapter.get_pools_count() == 1
+
+    pool_info = stableswap_adapter.get_pool_info(three_pool_contract)
+    assert pool_info.contract == three_pool_contract.address
+    assert pool_info.pool_type == BASE_TYPE
+    assert pool_info.gauge == three_pool_gauge.address
+    assert pool_info.zapper == ZERO
+    assert pool_info.lp_token == three_pool_lp_token.address
+    assert pool_info.n_coins == 3
+
     with boa.env.prank(alice):
-        stableswap_adapter.register_pool(three_pool_contract, ZERO)
-        assert stableswap_adapter.get_pools_count() == 1
-
-        pool_info = stableswap_adapter.get_pool_info(three_pool_contract)
-        assert pool_info.contract == three_pool_contract.address
-        assert pool_info.pool_type == BASE_TYPE
-        assert pool_info.gauge == three_pool_gauge.address
-        assert pool_info.zapper == ZERO
-        assert pool_info.lp_token == three_pool_lp_token.address
-
         stableswap_adapter.register_pool(musd_three_pool_contract, musd_three_pool_zapper.address)
         assert stableswap_adapter.get_pools_count() == 2
 
@@ -56,6 +62,7 @@ def test_set_pool_data_successfully(stableswap_adapter, alice, three_pool_contra
         assert pool_info.gauge == musd_three_pool_gauge.address
         assert pool_info.zapper == musd_three_pool_zapper.address
         assert pool_info.lp_token == musd_three_pool_lp_token.address
+        assert pool_info.n_coins == 2
 
 def test_cannot_set_zero_zap_address_for_meta_pool(stableswap_adapter, alice, musd_three_pool_contract):
     with boa.env.prank(alice):
@@ -63,12 +70,116 @@ def test_cannot_set_zero_zap_address_for_meta_pool(stableswap_adapter, alice, mu
             stableswap_adapter.register_pool(musd_three_pool_contract, ZERO)
 
 def test_emits_register_log(stableswap_adapter, alice, three_pool_contract, three_pool_gauge, three_pool_lp_token):
+    register_three_pool(stableswap_adapter, alice, three_pool_contract)
+    logs = stableswap_adapter.get_logs()
+    assert logs[0].pool == three_pool_contract.address
+    assert logs[0].pool_type == BASE_TYPE
+    assert logs[0].gauge == three_pool_gauge.address
+    assert logs[0].zapper == ZERO
+    assert logs[0].lp_token == three_pool_lp_token.address
+    assert logs[0].n_coins == 3
+
+
+# add_liquidity function
+
+def test_cannot_add_liquidity_with_wrong_coins_amount(stableswap_adapter, alice, three_pool_contract):
+    register_three_pool(stableswap_adapter, alice, three_pool_contract)
+    with boa.env.prank(alice):
+        with boa.reverts("stableswap_adapter: invalid number of amounts"):
+            stableswap_adapter.add_liquidity(three_pool_contract, [1, 2, 3, 4], 0)
+
+def test_cannot_add_liquidity_with_wrong_pool_address(stableswap_adapter, alice, three_pool_contract):
+    register_three_pool(stableswap_adapter, alice, three_pool_contract)
+    with boa.env.prank(alice):
+        with boa.reverts("stableswap_adapter: pool address mismatch"):
+            stableswap_adapter.add_liquidity(RANDOM_ADDRESS, [], 0)
+
+def test_can_add_liquidity_successfully_base_pool(stableswap_adapter, alice, three_pool_contract, three_pool_lp_token, dai, usdc, usdt):
+    register_three_pool(stableswap_adapter, alice, three_pool_contract)
+    mint_three_pool_tokens(alice, dai, usdc, usdt)
+    assert usdc.balanceOf(alice) == BALANCE
+    assert dai.balanceOf(alice) == BALANCE
+    assert usdt.balanceOf(alice) == BALANCE
+
+    AMOUNT_TO_ADD: int = int(100e18) # DAI
+    AMOUNT_TO_ADD_2: int = int(200e6) # USDC
+    AMOUNT_TO_ADD_3: int = int(300e6) # USDT
+
+    with boa.env.prank(alice):
+        dai.approve(stableswap_adapter, AMOUNT_TO_ADD)
+        usdc.approve(stableswap_adapter, AMOUNT_TO_ADD_2)
+        usdt.approve(stableswap_adapter, AMOUNT_TO_ADD_3)
+
+        mint_amount: int = stableswap_adapter.add_liquidity(three_pool_contract, [AMOUNT_TO_ADD, AMOUNT_TO_ADD_2, AMOUNT_TO_ADD_3], 0)
+
+        print(f"mint_amount in eth: {from_wei(mint_amount, 'ether')}") # 577.063511051232718447
+        print(f"mint_amount in wei: {mint_amount}") # 577063511051232718447
+
+    assert dai.balanceOf(alice) == BALANCE - AMOUNT_TO_ADD
+    assert usdc.balanceOf(alice) == BALANCE - AMOUNT_TO_ADD_2
+    assert usdt.balanceOf(alice) == BALANCE - AMOUNT_TO_ADD_3
+    assert three_pool_lp_token.balanceOf(alice) == mint_amount
+
+
+def test_can_add_liquidity_successfully_meta_pool(stableswap_adapter, alice, musd_three_pool_contract, musd_three_pool_gauge, musd_three_pool_lp_token, musd, three_crv):
+    register_musd_three_pool(stableswap_adapter, alice, musd_three_pool_contract, musd_three_pool_gauge)
+    mint_musd_three_pool_tokens(alice, musd, three_crv)
+    assert musd.balanceOf(alice) == BALANCE
+    assert three_crv.balanceOf(alice) == BALANCE
+
+    AMOUNT_TO_ADD: int = int(100e18) # MUSD
+    AMOUNT_TO_ADD_2: int = int(200e18) # THREE_CRV
+
+    with boa.env.prank(alice):
+        musd.approve(stableswap_adapter, AMOUNT_TO_ADD)
+        three_crv.approve(stableswap_adapter, AMOUNT_TO_ADD_2)
+
+        mint_amount: int = stableswap_adapter.add_liquidity(musd_three_pool_contract, [AMOUNT_TO_ADD, AMOUNT_TO_ADD_2], 0)
+
+        print(f"mint_amount in eth: {from_wei(mint_amount, 'ether')}") # 299.151184845285355847
+        print(f"mint_amount in wei: {mint_amount}") # 299151184845285355847
+
+    assert musd.balanceOf(alice) == BALANCE - AMOUNT_TO_ADD
+    assert three_crv.balanceOf(alice) == BALANCE - AMOUNT_TO_ADD_2
+
+    assert musd_three_pool_lp_token.balanceOf(alice) == mint_amount
+    
+
+
+# util functions
+def register_three_pool(stableswap_adapter, alice, three_pool_contract):
     with boa.env.prank(alice):
         stableswap_adapter.register_pool(three_pool_contract, ZERO)
 
-        logs = stableswap_adapter.get_logs()
-        assert logs[0].pool == three_pool_contract.address
-        assert logs[0].pool_type == BASE_TYPE
-        assert logs[0].gauge == three_pool_gauge.address
-        assert logs[0].zapper == ZERO
-        assert logs[0].lp_token == three_pool_lp_token.address
+def mint_three_pool_tokens(alice, dai, usdc, usdt):
+    # usdc
+    with boa.env.prank(usdc.owner()):
+        usdc.updateMasterMinter(alice)
+
+    with boa.env.prank(alice):
+        usdc.configureMinter(alice, BALANCE)
+        usdc.mint(alice, BALANCE)
+
+    # dai
+    with boa.env.prank(DAI_WHALE):
+        dai.transfer(alice, BALANCE)
+
+    # usdt
+    with boa.env.prank(usdt.owner()):
+        usdt.transferOwnership(alice)
+        
+    with boa.env.prank(alice):
+        usdt.issue(BALANCE)
+
+def register_musd_three_pool(stableswap_adapter, alice, musd_three_pool_contract, musd_three_pool_gauge):
+    with boa.env.prank(alice):
+        stableswap_adapter.register_pool(musd_three_pool_contract, musd_three_pool_gauge)
+
+def mint_musd_three_pool_tokens(alice, musd, three_crv):
+    # musd
+    with boa.env.prank(MUSD_WHALE):
+        musd.transfer(alice, BALANCE)
+
+    # three_crv
+    with boa.env.prank(THREE_CRV_WHALE):
+        three_crv.transfer(alice, BALANCE)

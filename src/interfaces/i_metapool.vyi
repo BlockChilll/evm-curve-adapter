@@ -8,15 +8,15 @@
 
 @external
 def add_liquidity(
-    amounts: DynArray[uint256, 5], min_mint_amount: uint256
+    amounts: uint256[8], min_mint_amount: uint256
 ) -> uint256:
     ...
 
 
 @external
 def remove_liquidity(
-    _amount: uint256, min_amounts: DynArray[uint256, 5]
-) -> DynArray[uint256, 5]:
+    _amount: uint256, min_amounts: DynArray[uint256, 8]
+) -> DynArray[uint256, 8]:
     ...
 
 
@@ -29,7 +29,7 @@ def remove_liquidity_one_coin(
 
 @external
 def remove_liquidity_imbalance(
-    amounts: DynArray[uint256, 5], max_burn_amount: uint256
+    amounts: DynArray[uint256, 8], max_burn_amount: uint256
 ) -> uint256:
     ...
 
@@ -42,7 +42,7 @@ def calc_withdraw_one_coin(_token_amount: uint256, i: int128) -> uint256:
 
 @external
 @view
-def calc_token_amount(amounts: DynArray[uint256, 5], deposit: bool) -> uint256:
+def calc_token_amount(amounts: DynArray[uint256, 8], deposit: bool) -> uint256:
     ...
 
 

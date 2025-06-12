@@ -20,7 +20,7 @@ def get_virtual_price() -> uint256:
 
 @external
 @view
-def calc_token_amount(amounts: DynArray[uint256, 5], deposit: bool) -> uint256:
+def calc_token_amount(amounts: DynArray[uint256, 8], deposit: bool) -> uint256:
     ...
 
 
@@ -54,7 +54,7 @@ def exchange(i: int128, j: int128, dx: uint256, min_dy: uint256):
 
 
 @external
-def add_liquidity(amounts: DynArray[uint256, 5], min_mint_amount: uint256):
+def add_liquidity(amounts: uint256[8], min_mint_amount: uint256):
     ...
 
 

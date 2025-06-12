@@ -28,3 +28,15 @@ def is_registered(_pool: address, _handler_id: uint256 = 0) -> bool:
 @view
 def get_lp_token(_pool: address, _handler_id: uint256 = 0) -> address:
     ...
+
+
+@external
+@view
+def get_n_coins(_pool: address, _handler_id: uint256 = 0) -> uint256:
+    ...
+
+
+@external
+@view
+def get_coins(_pool: address, _handler_id: uint256 = 0) -> address[8]:
+    ...
