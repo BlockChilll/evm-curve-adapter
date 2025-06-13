@@ -20,7 +20,7 @@ from ethereum.ercs import IERC20
 
 initializes: ownable
 
-exports: (ownable.__interface__)
+exports: ownable.__interface__
 
 # ------------------------------------------------------------------
 #                              TYPES
@@ -86,6 +86,20 @@ event LiquidityAdded:
     amounts: DynArray[uint256, MAX_COINS]
     min_mint_amount: uint256
     mint_amount: uint256
+
+
+# Emitted when liquidity is removed from a pool
+event LiquidityRemoved:
+    pool: indexed(address)
+    min_amounts: DynArray[uint256, MAX_COINS]
+    amount: uint256
+
+
+# Emitted when liquidity is removed from a pool
+event LiquidityRemovedImbalanced:
+    pool: indexed(address)
+    amounts: DynArray[uint256, MAX_COINS]
+    burn_amount: uint256
 
 
 # ------------------------------------------------------------------
@@ -188,9 +202,7 @@ def add_liquidity(
     self._check_are_amounts_valid(pool_address, amounts)
     self._check_is_pool_valid(pool_address)
 
-    coins: address[MAX_COINS] = staticcall meta_registry.get_coins(
-        pool_address
-    )
+    coins: address[MAX_COINS] = staticcall meta_registry.get_coins(pool_address)
 
     # because some tokens can have fees on transfer, we need to approve and send to curve pool actual amounts after fees charged
     amounts_after_fees: DynArray[uint256, MAX_COINS] = []
@@ -200,7 +212,9 @@ def add_liquidity(
         in_coin: address = coins[counter]
         counter += 1
         if amount > 0:
-            balance_before_fees: uint256 = staticcall IERC20(in_coin).balanceOf(self)
+            balance_before_fees: uint256 = staticcall IERC20(in_coin).balanceOf(
+                self
+            )
 
             responseTransfer: Bytes[32] = raw_call(
                 in_coin,
@@ -217,8 +231,12 @@ def add_liquidity(
                     responseTransfer, bool
                 ), "stableswap_adapter: failed to transfer coins"
 
-            balance_after_fees: uint256 = staticcall IERC20(in_coin).balanceOf(self)
-            amount_after_fees: uint256 = balance_after_fees - balance_before_fees
+            balance_after_fees: uint256 = staticcall IERC20(in_coin).balanceOf(
+                self
+            )
+            amount_after_fees: uint256 = (
+                balance_after_fees - balance_before_fees
+            )
 
             amounts_after_fees.append(amount_after_fees)
 
@@ -235,7 +253,6 @@ def add_liquidity(
                 assert convert(
                     responseApprove, bool
                 ), "stableswap_adapter: failed to approve coins"
-
     mint_amount: uint256 = 0
 
     # base pool does not return mint amount
@@ -243,11 +260,13 @@ def add_liquidity(
         pool_info.lp_token
     ).balanceOf(self)
 
-    stableswap_liquidity._add_liquidity(pool_info.contract, amounts_after_fees, min_mint_amount)
+    stableswap_liquidity._add_liquidity(
+        pool_info.contract, amounts_after_fees, min_mint_amount
+    )
 
-    lp_balance_after: uint256 = staticcall IERC20(
-        pool_info.lp_token
-    ).balanceOf(self)
+    lp_balance_after: uint256 = staticcall IERC20(pool_info.lp_token).balanceOf(
+        self
+    )
     mint_amount = lp_balance_after - lp_balance_before
 
     if mint_amount > 0:
@@ -264,7 +283,6 @@ def add_liquidity(
             assert convert(
                 response, bool
             ), "stableswap_adapter: failed to transfer coins"
-            
     log LiquidityAdded(
         pool=pool_address,
         amounts=amounts,
@@ -274,9 +292,191 @@ def add_liquidity(
 
     return mint_amount
 
-# @external
-# @nonreentrant
-# def remove(_name: type):
+
+@external
+@nonreentrant
+def remove_liquidity(
+    pool_address: address,
+    amount: uint256,
+    min_amounts: DynArray[uint256, MAX_COINS],
+):
+    """
+    @notice Remove liquidity from a pool
+    @param amount amount of lp tokens to remove
+    @param min_amounts array of minimum amounts of coins to receive
+    """
+    self._check_is_pool_valid(pool_address)
+    self._check_are_amounts_valid(pool_address, min_amounts)
+
+    pool_info: Pool = self.pool_registry[pool_address]
+
+    response_tf: Bytes[32] = raw_call(
+        pool_info.lp_token,
+        concat(
+            method_id("transferFrom(address,address,uint256)"),
+            convert(msg.sender, bytes32),
+            convert(self, bytes32),
+            convert(amount, bytes32),
+        ),
+        max_outsize=32,
+    )
+    if len(response_tf) > 0:
+        assert convert(
+            response_tf, bool
+        ), "stableswap_adapter: failed to transfer coins"
+
+    coins: address[MAX_COINS] = staticcall meta_registry.get_coins(pool_address)
+
+    balances_before: DynArray[uint256, MAX_COINS] = []
+    counter_before: uint256 = 0
+    for i: uint256 in min_amounts:
+        balances_before.append(
+            staticcall IERC20(coins[counter_before]).balanceOf(self)
+        )
+        counter_before += 1
+
+    stableswap_liquidity._remove_liquidity(
+        pool_info.contract, amount, min_amounts
+    )
+
+    balances_after: DynArray[uint256, MAX_COINS] = []
+    counter_after: uint256 = 0
+    for i: uint256 in min_amounts:
+        balances_after.append(
+            staticcall IERC20(coins[counter_after]).balanceOf(self)
+        )
+        counter_after += 1
+
+    counter: uint256 = 0
+    for i: uint256 in min_amounts:
+        out_amount: uint256 = balances_after[counter] - balances_before[counter]
+
+        if out_amount > 0:
+            response_t: Bytes[32] = raw_call(
+                coins[counter],
+                concat(
+                    method_id("transfer(address,uint256)"),
+                    convert(msg.sender, bytes32),
+                    convert(out_amount, bytes32),
+                ),
+                max_outsize=32,
+            )
+            if len(response_t) > 0:
+                assert convert(
+                    response_t, bool
+                ), "stableswap_adapter: failed to transfer coins"
+        counter += 1
+
+    log LiquidityRemoved(
+        pool=pool_address,
+        min_amounts=min_amounts,
+        amount=amount,
+    )
+
+
+@external
+@nonreentrant
+def remove_liquidity_imbalance(
+    pool_address: address,
+    amounts: DynArray[uint256, MAX_COINS],
+    max_burn_amount: uint256,
+):
+    """
+    @notice Remove liquidity from a pool
+    @param pool_address address of the pool contract
+    @param amounts array of amounts of coins to remove
+    @param max_burn_amount maximum amount of lp tokens to burn
+    """
+    self._check_is_pool_valid(pool_address)
+    self._check_are_amounts_valid(pool_address, amounts)
+
+    pool_info: Pool = self.pool_registry[pool_address]
+
+    response_tf: Bytes[32] = raw_call(
+        pool_info.lp_token,
+        concat(
+            method_id("transferFrom(address,address,uint256)"),
+            convert(msg.sender, bytes32),
+            convert(self, bytes32),
+            convert(max_burn_amount, bytes32),
+        ),
+        max_outsize=32,
+    )
+    if len(response_tf) > 0:
+        assert convert(
+            response_tf, bool
+        ), "stableswap_adapter: failed to transfer coins"
+
+    coins: address[MAX_COINS] = staticcall meta_registry.get_coins(pool_address)
+
+    balances_before: DynArray[uint256, MAX_COINS] = []
+    counter_before: uint256 = 0
+    for i: uint256 in amounts:
+        balances_before.append(
+            staticcall IERC20(coins[counter_before]).balanceOf(self)
+        )
+        counter_before += 1
+
+    lp_balance_before: uint256 = staticcall IERC20(
+        pool_info.lp_token
+    ).balanceOf(self)
+
+    stableswap_liquidity._remove_imbalanced_liquidity(
+        pool_info.contract, amounts, max_burn_amount
+    )
+
+    lp_balance_after: uint256 = staticcall IERC20(pool_info.lp_token).balanceOf(
+        self
+    )
+    burn_amount: uint256 = lp_balance_before - lp_balance_after
+
+    balances_after: DynArray[uint256, MAX_COINS] = []
+    counter_after: uint256 = 0
+    for i: uint256 in amounts:
+        balances_after.append(
+            staticcall IERC20(coins[counter_after]).balanceOf(self)
+        )
+        counter_after += 1
+
+    counter: uint256 = 0
+    for i: uint256 in amounts:
+        out_amount: uint256 = balances_after[counter] - balances_before[counter]
+
+        if out_amount > 0:
+            response_t: Bytes[32] = raw_call(
+                coins[counter],
+                concat(
+                    method_id("transfer(address,uint256)"),
+                    convert(msg.sender, bytes32),
+                    convert(out_amount, bytes32),
+                ),
+                max_outsize=32,
+            )
+            if len(response_t) > 0:
+                assert convert(
+                    response_t, bool
+                ), "stableswap_adapter: failed to transfer coins"
+        counter += 1
+
+    if burn_amount < max_burn_amount:
+        response_t: Bytes[32] = raw_call(
+            pool_info.lp_token,
+            concat(
+                method_id("transfer(address,uint256)"),
+                convert(msg.sender, bytes32),
+                convert(max_burn_amount - burn_amount, bytes32),
+            ),
+            max_outsize=32,
+        )
+        if len(response_t) > 0:
+            assert convert(
+                response_t, bool
+            ), "stableswap_adapter: failed to transfer coins"
+    log LiquidityRemovedImbalanced(
+        pool=pool_address,
+        amounts=amounts,
+        burn_amount=burn_amount,
+    )
 
 
 # ------------------------------------------------------------------
@@ -285,7 +485,9 @@ def add_liquidity(
 
 @external
 @view
-def get_lp_amount_after_deposit(pool_address: address, amounts: DynArray[uint256, MAX_COINS]) -> uint256:
+def get_lp_amount_after_deposit(
+    pool_address: address, amounts: DynArray[uint256, MAX_COINS]
+) -> uint256:
     """
     @notice Get the amount of lp tokens after depositing amounts
     @param pool_address address of the pool contract
@@ -294,11 +496,16 @@ def get_lp_amount_after_deposit(pool_address: address, amounts: DynArray[uint256
     """
     self._check_is_pool_valid(pool_address)
     self._check_are_amounts_valid(pool_address, amounts)
-    return stableswap_liquidity._get_lp_amount_after_deposit(pool_address, amounts, True)
+    return stableswap_liquidity._get_lp_amount_after_deposit(
+        pool_address, amounts, True
+    )
+
 
 @external
 @view
-def get_lp_amount_after_withdraw(pool_address: address, amounts: DynArray[uint256, MAX_COINS]) -> uint256:
+def get_lp_amount_after_withdraw(
+    pool_address: address, amounts: DynArray[uint256, MAX_COINS]
+) -> uint256:
     """
     @notice Get the amount of lp tokens after withdrawing amounts
     @param pool_address address of the pool contract
@@ -307,7 +514,10 @@ def get_lp_amount_after_withdraw(pool_address: address, amounts: DynArray[uint25
     """
     self._check_is_pool_valid(pool_address)
     self._check_are_amounts_valid(pool_address, amounts)
-    return stableswap_liquidity._get_lp_amount_after_deposit(pool_address, amounts, False)
+    return stableswap_liquidity._get_lp_amount_after_deposit(
+        pool_address, amounts, False
+    )
+
 
 @external
 @view
@@ -318,6 +528,7 @@ def get_pool_info(pool_address: address) -> Pool:
     @return pool_info Pool struct containing pool information
     """
     return self.pool_registry[pool_address]
+
 
 @external
 @view
@@ -347,9 +558,12 @@ def _check_is_pool_valid(pool_address: address):
         pool_address == pool_info.contract
     ), "stableswap_adapter: pool address mismatch"
 
+
 @internal
 @view
-def _check_are_amounts_valid(pool_address: address, amounts: DynArray[uint256, MAX_COINS]):
+def _check_are_amounts_valid(
+    pool_address: address, amounts: DynArray[uint256, MAX_COINS]
+):
     """
     @notice Check if the amounts are valid
     @param pool_address address of the pool contract

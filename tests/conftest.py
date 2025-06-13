@@ -67,16 +67,16 @@ def musd(active_network):
 def three_crv(active_network):
     return active_network.manifest_named("THREE_CRV")
 
-@pytest.fixture(scope="session")
+# ------------------------------------------------------------------
+#                          FUNCTION SCOPE
+# ------------------------------------------------------------------
+
+@pytest.fixture(scope="function")
 def alice():
     entropy = 13
     account = Account.create(entropy)
     boa.env.set_balance(account.address, BALANCE)
     return account.address
-
-# ------------------------------------------------------------------
-#                          FUNCTION SCOPE
-# ------------------------------------------------------------------
 
 @pytest.fixture(scope="function")
 def stableswap_adapter(active_network, alice):
