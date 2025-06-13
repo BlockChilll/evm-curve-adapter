@@ -79,7 +79,6 @@ event PoolRegistered:
     lp_token: address
     n_coins: uint256
 
-
 # Emitted when liquidity is added to a pool
 event LiquidityAdded:
     pool: indexed(address)
@@ -87,13 +86,11 @@ event LiquidityAdded:
     min_mint_amount: uint256
     mint_amount: uint256
 
-
 # Emitted when liquidity is removed from a pool
 event LiquidityRemoved:
     pool: indexed(address)
     min_amounts: DynArray[uint256, MAX_COINS]
     amount: uint256
-
 
 # Emitted when liquidity is removed from a pool
 event LiquidityRemovedImbalanced:
@@ -101,6 +98,13 @@ event LiquidityRemovedImbalanced:
     amounts: DynArray[uint256, MAX_COINS]
     burn_amount: uint256
 
+# Emitted when liquidity is removed from a pool
+event LiquidityRemovedOneCoin:
+    pool: indexed(address)
+    coin_index: int128
+    lp_amount: uint256
+    min_amount: uint256
+    out_amount: uint256
 
 # ------------------------------------------------------------------
 #                            FUNCTIONS
@@ -472,16 +476,118 @@ def remove_liquidity_imbalance(
             assert convert(
                 response_t, bool
             ), "stableswap_adapter: failed to transfer coins"
+
     log LiquidityRemovedImbalanced(
         pool=pool_address,
         amounts=amounts,
         burn_amount=burn_amount,
     )
+    
 
+@external
+@nonreentrant
+def remove_liquidity_one_coin(
+    pool_address: address,
+    coin_index: int128,
+    lp_amount: uint256,
+    min_amount: uint256,
+):
+    """
+    @notice Remove liquidity from a pool
+    @param pool_address address of the pool contract
+    @param coin_index index of the coin to remove
+    @param lp_amount amount of lp tokens to remove
+    @param min_amount minimum amount of coin to receive
+    """
+    self._check_is_pool_valid(pool_address)
+
+    pool_info: Pool = self.pool_registry[pool_address]
+
+    response_tf: Bytes[32] = raw_call(
+        pool_info.lp_token,
+        concat(
+            method_id("transferFrom(address,address,uint256)"),
+            convert(msg.sender, bytes32),
+            convert(self, bytes32),
+            convert(lp_amount, bytes32),
+        ),
+        max_outsize=32,
+    )
+    if len(response_tf) > 0:
+        assert convert(
+            response_tf, bool
+        ), "stableswap_adapter: failed to transfer coins"
+
+    coins: address[MAX_COINS] = staticcall meta_registry.get_coins(pool_address)
+
+    coin_indexed_balance_before: uint256 = staticcall IERC20(coins[coin_index]).balanceOf(self)
+
+    if pool_info.pool_type == PoolType.BASE:
+        extcall i_basepool(pool_info.contract).remove_liquidity_one_coin(
+            lp_amount, coin_index, min_amount
+        )
+    else:
+        extcall i_metapool(pool_info.contract).remove_liquidity_one_coin(
+            lp_amount, coin_index, min_amount
+        )
+
+    coin_indexed_balance_after: uint256 = staticcall IERC20(coins[coin_index]).balanceOf(self)
+
+    out_amount: uint256 = coin_indexed_balance_after - coin_indexed_balance_before
+
+    if out_amount > 0:
+        response_t: Bytes[32] = raw_call(
+            coins[coin_index],
+            abi_encode(
+                msg.sender,
+                out_amount,
+                method_id=method_id("transfer(address,uint256)"),
+            ),
+            max_outsize=32,
+        )
+        if len(response_t) > 0:
+            assert convert(
+                response_t, bool
+            ), "stableswap_adapter: failed to transfer coins"
+    
+    log LiquidityRemovedOneCoin(
+        pool=pool_address,
+        coin_index=coin_index,
+        lp_amount=lp_amount,
+        min_amount=min_amount,
+        out_amount=out_amount,
+    )
 
 # ------------------------------------------------------------------
 #                               VIEW
 # ------------------------------------------------------------------
+
+@external
+@view
+def get_lp_amount_after_remove_one_coin(
+    pool_address: address,
+    coin_index: int128,
+    lp_amount: uint256,
+) -> uint256:
+    """
+    @notice Get the amount of lp tokens after removing one coin
+    @param pool_address address of the pool contract
+    @param coin_index index of the coin to remove
+    @param lp_amount amount of lp tokens to remove
+    @return lp_amount amount of lp tokens after removing one coin
+    """
+    self._check_is_pool_valid(pool_address)
+
+    pool_info: Pool = self.pool_registry[pool_address]
+
+    out_amount: uint256 = 0
+    if pool_info.pool_type == PoolType.BASE:
+        out_amount = staticcall i_basepool(pool_info.contract).calc_withdraw_one_coin(lp_amount, coin_index)
+    else:
+        out_amount = staticcall i_metapool(pool_info.contract).calc_withdraw_one_coin(lp_amount, coin_index)
+        
+    return out_amount
+
 
 @external
 @view

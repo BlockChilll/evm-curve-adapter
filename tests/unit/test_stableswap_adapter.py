@@ -408,6 +408,152 @@ def test_can_remove_liquidity_imbalanced_successfully_meta_pool(stableswap_adapt
     assert log.amounts == [AMOUNT_TO_ADD//int(2), AMOUNT_TO_ADD_2//int(2)]
     assert log.burn_amount == mint_amount - musd_three_pool_lp_token.balanceOf(alice)
 
+# ------------------------------------------------------------------
+#                 REMOVE_LIQUIDITY_ONE_COIN FUNCTION TESTS
+# ------------------------------------------------------------------
+
+def test_can_remove_liquidity_one_coin_successfully_base_pool(stableswap_adapter, alice, three_pool_contract, three_pool_lp_token, dai, usdc, usdt):
+    register_three_pool(stableswap_adapter, alice, three_pool_contract)
+    mint_three_pool_tokens(alice, dai, usdc, usdt)
+
+    AMOUNT_TO_ADD: int = int(100e18) # DAI
+    AMOUNT_TO_ADD_2: int = int(200e6) # USDC
+    AMOUNT_TO_ADD_3: int = int(300e6) # USDT
+
+    with boa.env.prank(alice):
+        dai.approve(stableswap_adapter, AMOUNT_TO_ADD)
+        usdc.approve(stableswap_adapter, AMOUNT_TO_ADD_2)
+        usdt.approve(stableswap_adapter, AMOUNT_TO_ADD_3)
+
+        mint_amount: int = stableswap_adapter.add_liquidity(three_pool_contract, [AMOUNT_TO_ADD, AMOUNT_TO_ADD_2, AMOUNT_TO_ADD_3], 0)
+
+        assert three_pool_lp_token.balanceOf(alice) == mint_amount
+        assert dai.balanceOf(alice) == BALANCE - AMOUNT_TO_ADD
+        assert usdc.balanceOf(alice) == BALANCE - AMOUNT_TO_ADD_2
+        assert usdt.balanceOf(alice) == BALANCE - AMOUNT_TO_ADD_3
+
+        three_pool_lp_token.approve(stableswap_adapter, mint_amount)
+
+        dai_balance_before: int = dai.balanceOf(alice)
+        usdc_balance_before: int = usdc.balanceOf(alice)
+        usdt_balance_before: int = usdt.balanceOf(alice)
+
+        stableswap_adapter.remove_liquidity_one_coin(three_pool_contract, 0, mint_amount, 0)
+
+        dai_balance_after: int = dai.balanceOf(alice)
+        usdc_balance_after: int = usdc.balanceOf(alice)
+        usdt_balance_after: int = usdt.balanceOf(alice)
+
+        dai_withdraw_amount: int = dai_balance_after - dai_balance_before
+        usdc_withdraw_amount: int = usdc_balance_after - usdc_balance_before
+        usdt_withdraw_amount: int = usdt_balance_after - usdt_balance_before
+
+        print(f"dai_withdraw_amount: {dai_withdraw_amount}")
+        assert dai_withdraw_amount > AMOUNT_TO_ADD # 600143313752894079944
+        assert usdc_withdraw_amount == 0
+        assert usdt_withdraw_amount == 0
+
+        print(f"lp_token balance: {three_pool_lp_token.balanceOf(alice)}")
+        assert three_pool_lp_token.balanceOf(alice) == 0
+        assert dai.balanceOf(alice) == BALANCE - AMOUNT_TO_ADD + dai_withdraw_amount
+        assert usdc.balanceOf(alice) == BALANCE - AMOUNT_TO_ADD_2
+        assert usdt.balanceOf(alice) == BALANCE - AMOUNT_TO_ADD_3
+
+    logs = stableswap_adapter.get_logs()
+    log = logs[len(logs) - 1]
+    
+    assert log.pool == three_pool_contract.address
+    assert log.coin_index == 0
+    assert log.lp_amount == mint_amount
+    assert log.min_amount == 0
+    assert log.out_amount == dai_withdraw_amount
+
+def test_can_remove_liquidity_one_coin_successfully_meta_pool(stableswap_adapter, alice, musd_three_pool_contract, musd_three_pool_gauge, musd_three_pool_lp_token, musd, three_crv):
+    register_musd_three_pool(stableswap_adapter, alice, musd_three_pool_contract, musd_three_pool_gauge)
+    mint_musd_three_pool_tokens(alice, musd, three_crv)
+
+    AMOUNT_TO_ADD: int = int(100e18) # MUSD
+    AMOUNT_TO_ADD_2: int = int(200e18) # THREE_CRV
+
+    with boa.env.prank(alice):
+        musd.approve(stableswap_adapter, AMOUNT_TO_ADD)
+        three_crv.approve(stableswap_adapter, AMOUNT_TO_ADD_2)
+
+        mint_amount: int = stableswap_adapter.add_liquidity(musd_three_pool_contract, [AMOUNT_TO_ADD, AMOUNT_TO_ADD_2], 0)
+        
+        assert musd_three_pool_lp_token.balanceOf(alice) == mint_amount
+        assert musd.balanceOf(alice) == BALANCE - AMOUNT_TO_ADD
+        assert three_crv.balanceOf(alice) == BALANCE - AMOUNT_TO_ADD_2
+
+        musd_three_pool_lp_token.approve(stableswap_adapter, mint_amount)
+        
+        musd_balance_before: int = musd.balanceOf(alice)
+        three_crv_balance_before: int = three_crv.balanceOf(alice)
+
+        stableswap_adapter.remove_liquidity_one_coin(musd_three_pool_contract, 0, mint_amount, 0)
+
+        musd_balance_after: int = musd.balanceOf(alice)
+        three_crv_balance_after: int = three_crv.balanceOf(alice)   
+
+        musd_withdraw_amount: int = musd_balance_after - musd_balance_before
+        three_crv_withdraw_amount: int = three_crv_balance_after - three_crv_balance_before
+
+        assert musd_withdraw_amount > AMOUNT_TO_ADD
+        assert three_crv_withdraw_amount == 0
+
+        print(f"lp_token balance: {musd_three_pool_lp_token.balanceOf(alice)}")
+        assert musd_three_pool_lp_token.balanceOf(alice) == 0
+        assert musd.balanceOf(alice) == BALANCE - AMOUNT_TO_ADD + musd_withdraw_amount
+        assert three_crv.balanceOf(alice) == BALANCE - AMOUNT_TO_ADD_2
+
+    logs = stableswap_adapter.get_logs()    
+    log = logs[len(logs) - 1]
+    
+    assert log.pool == musd_three_pool_contract.address
+    assert log.coin_index == 0
+    assert log.lp_amount == mint_amount
+    assert log.min_amount == 0
+    assert log.out_amount == musd_withdraw_amount
+
+# ------------------------------------------------------------------
+#        GET_LP_AMOUNT_AFTER_REMOVE_ONE_COIN FUNCTION TESTS
+# ------------------------------------------------------------------
+
+def test_get_lp_amount_after_remove_one_coin_successfully_base_pool(stableswap_adapter, alice, three_pool_contract, three_pool_lp_token, dai, usdc, usdt):
+    register_three_pool(stableswap_adapter, alice, three_pool_contract)
+    mint_three_pool_tokens(alice, dai, usdc, usdt)
+
+    AMOUNT_TO_ADD: int = int(100e18) # DAI
+    AMOUNT_TO_ADD_2: int = int(200e6) # USDC
+    AMOUNT_TO_ADD_3: int = int(300e6) # USDT
+
+    with boa.env.prank(alice):
+        dai.approve(stableswap_adapter, AMOUNT_TO_ADD)
+        usdc.approve(stableswap_adapter, AMOUNT_TO_ADD_2)
+        usdt.approve(stableswap_adapter, AMOUNT_TO_ADD_3)
+
+        mint_amount: int = stableswap_adapter.add_liquidity(three_pool_contract, [AMOUNT_TO_ADD, AMOUNT_TO_ADD_2, AMOUNT_TO_ADD_3], 0)
+
+        out_amount: int = stableswap_adapter.get_lp_amount_after_remove_one_coin(three_pool_contract, 0, mint_amount)
+
+        assert out_amount > AMOUNT_TO_ADD
+
+def test_get_lp_amount_after_remove_one_coin_successfully_meta_pool(stableswap_adapter, alice, musd_three_pool_contract, musd_three_pool_gauge, musd_three_pool_lp_token, musd, three_crv):
+    register_musd_three_pool(stableswap_adapter, alice, musd_three_pool_contract, musd_three_pool_gauge)
+    mint_musd_three_pool_tokens(alice, musd, three_crv)
+
+    AMOUNT_TO_ADD: int = int(100e18) # MUSD
+    AMOUNT_TO_ADD_2: int = int(200e18) # THREE_CRV
+
+    with boa.env.prank(alice):
+        musd.approve(stableswap_adapter, AMOUNT_TO_ADD)
+        three_crv.approve(stableswap_adapter, AMOUNT_TO_ADD_2)
+
+        mint_amount: int = stableswap_adapter.add_liquidity(musd_three_pool_contract, [AMOUNT_TO_ADD, AMOUNT_TO_ADD_2], 0)
+
+        out_amount: int = stableswap_adapter.get_lp_amount_after_remove_one_coin(musd_three_pool_contract, 0, mint_amount)
+
+        assert out_amount > AMOUNT_TO_ADD
 
 # ------------------------------------------------------------------
 #                      UTIL FUNCTIONS

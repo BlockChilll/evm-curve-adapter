@@ -20,34 +20,6 @@ def meta_registry(active_network):
     return active_network.manifest_named("meta_registry")
 
 @pytest.fixture(scope="session")
-def three_pool_contract(active_network):
-    return active_network.manifest_named("three_pool_contract")
-
-@pytest.fixture(scope="session")
-def three_pool_gauge(active_network):
-    return active_network.manifest_named("three_pool_gauge")
-
-@pytest.fixture(scope="session")
-def three_pool_lp_token(active_network):
-    return active_network.manifest_named("three_pool_lp_token")
-
-@pytest.fixture(scope="session")
-def musd_three_pool_contract(active_network):
-    return active_network.manifest_named("musd_three_pool_contract")
-
-@pytest.fixture(scope="session")
-def musd_three_pool_gauge(active_network):
-    return active_network.manifest_named("musd_three_pool_gauge")
-
-@pytest.fixture(scope="session")
-def musd_three_pool_lp_token(active_network):
-    return active_network.manifest_named("musd_three_pool_lp_token")
-
-@pytest.fixture(scope="session")
-def musd_three_pool_zapper(active_network):
-    return active_network.manifest_named("musd_three_pool_zapper")
-
-@pytest.fixture(scope="session")
 def dai(active_network):
     return active_network.manifest_named("DAI")
 
@@ -70,6 +42,34 @@ def three_crv(active_network):
 # ------------------------------------------------------------------
 #                          FUNCTION SCOPE
 # ------------------------------------------------------------------
+
+@pytest.fixture(scope="function")
+def three_pool_contract(active_network):
+    return active_network.manifest_named("three_pool_contract")
+
+@pytest.fixture(scope="function")
+def three_pool_gauge(active_network):
+    return active_network.manifest_named("three_pool_gauge")
+
+@pytest.fixture(scope="function")
+def three_pool_lp_token(active_network):
+    return active_network.manifest_named("three_pool_lp_token")
+
+@pytest.fixture(scope="function")
+def musd_three_pool_contract(active_network):
+    return active_network.manifest_named("musd_three_pool_contract")
+
+@pytest.fixture(scope="function")
+def musd_three_pool_gauge(active_network):
+    return active_network.manifest_named("musd_three_pool_gauge")
+
+@pytest.fixture(scope="function")
+def musd_three_pool_lp_token(active_network):
+    return active_network.manifest_named("musd_three_pool_lp_token")
+
+@pytest.fixture(scope="function")
+def musd_three_pool_zapper(active_network):
+    return active_network.manifest_named("musd_three_pool_zapper")
 
 @pytest.fixture(scope="function")
 def alice():
