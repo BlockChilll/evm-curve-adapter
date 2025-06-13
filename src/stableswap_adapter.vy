@@ -79,6 +79,7 @@ event PoolRegistered:
     lp_token: address
     n_coins: uint256
 
+
 # Emitted when liquidity is added to a pool
 event LiquidityAdded:
     pool: indexed(address)
@@ -86,17 +87,20 @@ event LiquidityAdded:
     min_mint_amount: uint256
     mint_amount: uint256
 
+
 # Emitted when liquidity is removed from a pool
 event LiquidityRemoved:
     pool: indexed(address)
     min_amounts: DynArray[uint256, MAX_COINS]
     amount: uint256
 
+
 # Emitted when liquidity is removed from a pool
 event LiquidityRemovedImbalanced:
     pool: indexed(address)
     amounts: DynArray[uint256, MAX_COINS]
     burn_amount: uint256
+
 
 # Emitted when liquidity is removed from a pool
 event LiquidityRemovedOneCoin:
@@ -106,6 +110,16 @@ event LiquidityRemovedOneCoin:
     min_amount: uint256
     out_amount: uint256
 
+
+# Emitted when coins are exchanged
+event Exchange:
+    pool: indexed(address)
+    index_in: int128
+    index_out: int128
+    amount_in: uint256
+    min_amount_out: uint256
+    out_amount: uint256
+    
 # ------------------------------------------------------------------
 #                            FUNCTIONS
 # ------------------------------------------------------------------
@@ -482,7 +496,7 @@ def remove_liquidity_imbalance(
         amounts=amounts,
         burn_amount=burn_amount,
     )
-    
+
 
 @external
 @nonreentrant
@@ -520,7 +534,9 @@ def remove_liquidity_one_coin(
 
     coins: address[MAX_COINS] = staticcall meta_registry.get_coins(pool_address)
 
-    coin_indexed_balance_before: uint256 = staticcall IERC20(coins[coin_index]).balanceOf(self)
+    coin_indexed_balance_before: uint256 = staticcall IERC20(
+        coins[coin_index]
+    ).balanceOf(self)
 
     if pool_info.pool_type == PoolType.BASE:
         extcall i_basepool(pool_info.contract).remove_liquidity_one_coin(
@@ -531,9 +547,13 @@ def remove_liquidity_one_coin(
             lp_amount, coin_index, min_amount
         )
 
-    coin_indexed_balance_after: uint256 = staticcall IERC20(coins[coin_index]).balanceOf(self)
+    coin_indexed_balance_after: uint256 = staticcall IERC20(
+        coins[coin_index]
+    ).balanceOf(self)
 
-    out_amount: uint256 = coin_indexed_balance_after - coin_indexed_balance_before
+    out_amount: uint256 = (
+        coin_indexed_balance_after - coin_indexed_balance_before
+    )
 
     if out_amount > 0:
         response_t: Bytes[32] = raw_call(
@@ -549,7 +569,7 @@ def remove_liquidity_one_coin(
             assert convert(
                 response_t, bool
             ), "stableswap_adapter: failed to transfer coins"
-    
+
     log LiquidityRemovedOneCoin(
         pool=pool_address,
         coin_index=coin_index,
@@ -558,9 +578,134 @@ def remove_liquidity_one_coin(
         out_amount=out_amount,
     )
 
+
+@external
+@nonreentrant
+def exchange(
+    pool_address: address,
+    index_in: int128,
+    index_out: int128,
+    amount_in: uint256,
+    min_amount_out: uint256,
+):
+    """
+    @notice Exchange coins in a pool
+    @param pool_address address of the pool contract
+    @param index_in index of the coin to exchange
+    @param index_out index of the coin to receive
+    @param amount_in amount of coin to exchange
+    @param min_amount_out minimum amount of coin to receive
+    """
+    self._check_is_pool_valid(pool_address)
+
+    pool_info: Pool = self.pool_registry[pool_address]
+
+    assert index_in >= convert(0, int128) and index_in < convert(pool_info.n_coins, int128), "stableswap_adapter: index in out of bounds"
+    assert index_out >= convert(0, int128) and index_out < convert(pool_info.n_coins, int128), "stableswap_adapter: index out out of bounds"
+    assert index_in != index_out, "stableswap_adapter: index in and index out cannot be the same"
+    
+    coins: address[MAX_COINS] = staticcall meta_registry.get_coins(pool_address)
+    
+    response_tf: Bytes[32] = raw_call(
+        coins[index_in],
+        abi_encode(
+            msg.sender,
+            self,
+            amount_in,
+            method_id=method_id("transferFrom(address,address,uint256)"),
+        ),
+        max_outsize=32,
+    )
+    if len(response_tf) > 0:
+        assert convert(
+            response_tf, bool
+        ), "stableswap_adapter: failed to transfer coins"
+
+    response_t: Bytes[32] = raw_call(
+        coins[index_in],
+        abi_encode(
+            pool_info.contract,
+            amount_in,
+            method_id=method_id("approve(address,uint256)"),
+        ),
+        max_outsize=32,
+    )
+    if len(response_t) > 0:
+        assert convert(
+            response_t, bool
+        ), "stableswap_adapter: failed to transfer coins"
+
+    out_token_balance_before: uint256 = staticcall IERC20(coins[index_out]).balanceOf(self)
+
+    if pool_info.pool_type == PoolType.BASE:
+        extcall i_basepool(pool_info.contract).exchange(index_in, index_out, amount_in, min_amount_out)
+    else:
+        extcall i_metapool(pool_info.contract).exchange(index_in, index_out, amount_in, min_amount_out)
+
+    out_token_balance_after: uint256 = staticcall IERC20(coins[index_out]).balanceOf(self)
+
+    out_amount: uint256 = out_token_balance_after - out_token_balance_before
+
+    if out_amount > 0:
+        response_t_out: Bytes[32] = raw_call(
+            coins[index_out],
+            abi_encode(
+                msg.sender,
+                out_amount,
+                method_id=method_id("transfer(address,uint256)"),
+            ),
+            max_outsize=32,
+        )
+        if len(response_t_out) > 0:
+            assert convert(
+                response_t_out, bool
+            ), "stableswap_adapter: failed to transfer coins"
+
+    log Exchange(
+        pool=pool_address,
+        index_in=index_in,
+        index_out=index_out,
+        amount_in=amount_in,
+        min_amount_out=min_amount_out,
+        out_amount=out_amount,
+    )
+
+
 # ------------------------------------------------------------------
 #                               VIEW
 # ------------------------------------------------------------------
+
+@external
+@view
+def get_exchange_amount_out(
+    pool_address: address,
+    index_in: int128,
+    index_out: int128,
+    amount_in: uint256,
+) -> uint256:
+    """
+    @notice Get the amount of coins out after exchanging
+    @param pool_address address of the pool contract
+    @param index_in index of the coin to exchange
+    @param index_out index of the coin to receive
+    @param amount_in amount of coin to exchange
+    @return amount_out amount of coin to receive
+    """
+    self._check_is_pool_valid(pool_address)
+
+    pool_info: Pool = self.pool_registry[pool_address]
+
+    assert index_in >= convert(0, int128) and index_in < convert(pool_info.n_coins, int128), "stableswap_adapter: index in out of bounds"
+    assert index_out >= convert(0, int128) and index_out < convert(pool_info.n_coins, int128), "stableswap_adapter: index out out of bounds"
+    assert index_in != index_out, "stableswap_adapter: index in and index out cannot be the same"
+
+    out_amount: uint256 = 0 
+    if pool_info.pool_type == PoolType.BASE:
+        out_amount = staticcall i_basepool(pool_info.contract).get_dy(index_in, index_out, amount_in)
+    else:
+        out_amount = staticcall i_metapool(pool_info.contract).get_dy(index_in, index_out, amount_in)
+    
+    return out_amount
 
 @external
 @view
@@ -582,10 +727,14 @@ def get_lp_amount_after_remove_one_coin(
 
     out_amount: uint256 = 0
     if pool_info.pool_type == PoolType.BASE:
-        out_amount = staticcall i_basepool(pool_info.contract).calc_withdraw_one_coin(lp_amount, coin_index)
+        out_amount = staticcall i_basepool(
+            pool_info.contract
+        ).calc_withdraw_one_coin(lp_amount, coin_index)
     else:
-        out_amount = staticcall i_metapool(pool_info.contract).calc_withdraw_one_coin(lp_amount, coin_index)
-        
+        out_amount = staticcall i_metapool(
+            pool_info.contract
+        ).calc_withdraw_one_coin(lp_amount, coin_index)
+
     return out_amount
 
 

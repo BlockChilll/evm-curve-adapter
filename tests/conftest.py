@@ -15,33 +15,33 @@ ZERO = "0x0000000000000000000000000000000000000000"
 def active_network():
     return get_active_network()
 
-@pytest.fixture(scope="session")
-def meta_registry(active_network):
-    return active_network.manifest_named("meta_registry")
-
-@pytest.fixture(scope="session")
-def dai(active_network):
-    return active_network.manifest_named("DAI")
-
-@pytest.fixture(scope="session")
-def usdc(active_network):
-    return active_network.manifest_named("USDC")
-
-@pytest.fixture(scope="session")
-def usdt(active_network):
-    return active_network.manifest_named("USDT")
-
-@pytest.fixture(scope="session")
-def musd(active_network):
-    return active_network.manifest_named("MUSD")
-
-@pytest.fixture(scope="session")
-def three_crv(active_network):
-    return active_network.manifest_named("THREE_CRV")
-
 # ------------------------------------------------------------------
 #                          FUNCTION SCOPE
 # ------------------------------------------------------------------
+
+@pytest.fixture(scope="function")
+def meta_registry(active_network):
+    return active_network.manifest_named("meta_registry")
+
+@pytest.fixture(scope="function")
+def dai(active_network):
+    return active_network.manifest_named("DAI")
+
+@pytest.fixture(scope="function")
+def usdc(active_network):
+    return active_network.manifest_named("USDC")
+
+@pytest.fixture(scope="function")
+def usdt(active_network):
+    return active_network.manifest_named("USDT")
+
+@pytest.fixture(scope="function")
+def musd(active_network):
+    return active_network.manifest_named("MUSD")
+
+@pytest.fixture(scope="function")
+def three_crv(active_network):
+    return active_network.manifest_named("THREE_CRV")
 
 @pytest.fixture(scope="function")
 def three_pool_contract(active_network):

@@ -519,7 +519,7 @@ def test_can_remove_liquidity_one_coin_successfully_meta_pool(stableswap_adapter
 #        GET_LP_AMOUNT_AFTER_REMOVE_ONE_COIN FUNCTION TESTS
 # ------------------------------------------------------------------
 
-def test_get_lp_amount_after_remove_one_coin_successfully_base_pool(stableswap_adapter, alice, three_pool_contract, three_pool_lp_token, dai, usdc, usdt):
+def test_get_lp_amount_after_remove_one_coin_successfully_base_pool(stableswap_adapter, alice, three_pool_contract, dai, usdc, usdt):
     register_three_pool(stableswap_adapter, alice, three_pool_contract)
     mint_three_pool_tokens(alice, dai, usdc, usdt)
 
@@ -555,6 +555,142 @@ def test_get_lp_amount_after_remove_one_coin_successfully_meta_pool(stableswap_a
 
         assert out_amount > AMOUNT_TO_ADD
 
+# ------------------------------------------------------------------
+#                      EXCHANGE FUNCTION TESTS
+# ------------------------------------------------------------------
+
+def test_cannot_exchange_with_wrong_pool_address(stableswap_adapter, alice, three_pool_contract):
+    register_three_pool(stableswap_adapter, alice, three_pool_contract)
+
+    AMOUNT_IN: int = int(100e18)
+
+    with boa.env.prank(alice):
+        with boa.reverts("stableswap_adapter: pool address mismatch"):
+            stableswap_adapter.exchange(RANDOM_ADDRESS, 0, 1, AMOUNT_IN, 0)
+
+def test_cannot_exchange_with_wrong_index_in(stableswap_adapter, alice, three_pool_contract):
+    register_three_pool(stableswap_adapter, alice, three_pool_contract)
+
+    AMOUNT_IN: int = int(100e18)
+
+    with boa.env.prank(alice):
+        with boa.reverts("stableswap_adapter: index in out of bounds"):
+            stableswap_adapter.exchange(three_pool_contract, 3, 1, AMOUNT_IN, 0)
+
+def test_cannot_exchange_with_wrong_index_out(stableswap_adapter, alice, three_pool_contract):
+    register_three_pool(stableswap_adapter, alice, three_pool_contract)
+
+    AMOUNT_IN: int = int(100e18)
+
+    with boa.env.prank(alice):
+        with boa.reverts("stableswap_adapter: index out out of bounds"):
+            stableswap_adapter.exchange(three_pool_contract, 0, 3, AMOUNT_IN, 0)
+
+def test_cannot_exchange_with_same_index_in_and_out(stableswap_adapter, alice, three_pool_contract):
+    register_three_pool(stableswap_adapter, alice, three_pool_contract)
+
+    AMOUNT_IN: int = int(100e18)
+
+    with boa.env.prank(alice):
+        with boa.reverts("stableswap_adapter: index in and index out cannot be the same"):
+            stableswap_adapter.exchange(three_pool_contract, 0, 0, AMOUNT_IN, 0)
+
+def test_can_successfully_exchange_base_pool(stableswap_adapter, alice, three_pool_contract, dai, usdc, usdt):
+    register_three_pool(stableswap_adapter, alice, three_pool_contract)
+    mint_three_pool_tokens(alice, dai, usdc, usdt)
+    
+    AMOUNT_IN: int = int(10e18) # DAI
+
+    dai_balance_before: int = dai.balanceOf(alice) # 0 index
+    usdc_balance_before: int = usdc.balanceOf(alice) # 1 index
+
+    with boa.env.prank(alice):
+        dai.approve(stableswap_adapter, AMOUNT_IN)
+        stableswap_adapter.exchange(three_pool_contract, 0, 1, AMOUNT_IN, 0)
+
+    dai_balance_after: int = dai.balanceOf(alice)
+    usdc_balance_after: int = usdc.balanceOf(alice)
+
+    dai_in_amount: int = dai_balance_before - dai_balance_after
+    usdc_out_amount: int = usdc_balance_after - usdc_balance_before
+
+    print(f"usdc_out_amount: {usdc_out_amount}") # 9999304
+    assert usdc_out_amount > 0
+
+    assert dai_in_amount == AMOUNT_IN
+    assert dai_balance_after == dai_balance_before - AMOUNT_IN
+    assert usdc_balance_after > usdc_balance_before
+
+    logs = stableswap_adapter.get_logs()
+    log = logs[len(logs) - 1]
+
+    assert log.pool == three_pool_contract.address
+    assert log.index_in == 0
+    assert log.index_out == 1
+    assert log.amount_in == AMOUNT_IN
+    assert log.min_amount_out == 0
+    assert log.out_amount == usdc_out_amount
+
+def test_can_successfully_exchange_meta_pool(stableswap_adapter, alice, musd_three_pool_contract, musd_three_pool_gauge, musd_three_pool_lp_token, musd, three_crv):
+    register_musd_three_pool(stableswap_adapter, alice, musd_three_pool_contract, musd_three_pool_gauge)
+    mint_musd_three_pool_tokens(alice, musd, three_crv)
+
+    AMOUNT_IN: int = int(10e18) # MUSD
+
+    musd_balance_before: int = musd.balanceOf(alice) # 0 index
+    three_crv_balance_before: int = three_crv.balanceOf(alice) # 1 index
+
+    with boa.env.prank(alice):
+        musd.approve(stableswap_adapter, AMOUNT_IN)
+        stableswap_adapter.exchange(musd_three_pool_contract, 0, 1, AMOUNT_IN, 0)
+
+    musd_balance_after: int = musd.balanceOf(alice)
+    three_crv_balance_after: int = three_crv.balanceOf(alice)
+
+    musd_in_amount: int = musd_balance_before - musd_balance_after
+    three_crv_out_amount: int = three_crv_balance_after - three_crv_balance_before
+
+    print(f"three_crv_out_amount: {three_crv_out_amount}") 
+    assert three_crv_out_amount > 0
+
+    assert musd_in_amount == AMOUNT_IN
+    assert musd_balance_after == musd_balance_before - AMOUNT_IN
+    assert three_crv_balance_after > three_crv_balance_before
+
+    logs = stableswap_adapter.get_logs()
+    log = logs[len(logs) - 1]
+
+    assert log.pool == musd_three_pool_contract.address
+    assert log.index_in == 0
+    assert log.index_out == 1
+    assert log.amount_in == AMOUNT_IN
+    assert log.min_amount_out == 0
+    assert log.out_amount == three_crv_out_amount
+
+# ------------------------------------------------------------------
+#              GET_EXCHANGE_AMOUNT_OUT FUNCTION TESTS
+# ------------------------------------------------------------------
+
+def test_get_exchange_amount_out_successfully_base_pool(stableswap_adapter, alice, three_pool_contract, dai, usdc, usdt):
+    register_three_pool(stableswap_adapter, alice, three_pool_contract)
+
+    AMOUNT_IN: int = int(10e18) # DAI
+
+    out_amount: int = stableswap_adapter.get_exchange_amount_out(three_pool_contract, 0, 1, AMOUNT_IN)
+
+    print(f"out_amount: {out_amount}") # 9999304
+    assert out_amount > 0
+
+def test_get_exchange_amount_out_successfully_meta_pool(stableswap_adapter, alice, musd_three_pool_contract, musd_three_pool_gauge, musd_three_pool_lp_token, musd, three_crv):
+    register_musd_three_pool(stableswap_adapter, alice, musd_three_pool_contract, musd_three_pool_gauge)
+
+    AMOUNT_IN: int = int(10e18) # MUSD
+
+    out_amount: int = stableswap_adapter.get_exchange_amount_out(musd_three_pool_contract, 0, 1, AMOUNT_IN)
+
+    assert out_amount > 0
+
+    
 # ------------------------------------------------------------------
 #                      UTIL FUNCTIONS
 # ------------------------------------------------------------------
