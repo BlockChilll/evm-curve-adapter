@@ -1,0 +1,22 @@
+# pragma version 0.4.1
+# @license MIT
+
+"""
+@notice common interface for all stableswap gauges
+"""
+
+
+@external
+def deposit(_value: uint256, addr: address):
+    ...
+
+
+@external
+def withdraw(_value: uint256):
+    ...
+
+
+@external
+@view
+def integrate_fraction(addr: address) -> uint256:
+    ...

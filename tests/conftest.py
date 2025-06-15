@@ -24,6 +24,14 @@ def meta_registry(active_network):
     return active_network.manifest_named("meta_registry")
 
 @pytest.fixture(scope="function")
+def minter(active_network):
+    return active_network.manifest_named("minter")
+
+@pytest.fixture(scope="function")
+def crv(active_network):
+    return active_network.manifest_named("CRV")
+
+@pytest.fixture(scope="function")
 def dai(active_network):
     return active_network.manifest_named("DAI")
 

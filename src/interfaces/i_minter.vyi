@@ -1,0 +1,16 @@
+# pragma version 0.4.1
+# @license MIT
+
+"""
+@notice common interface for minter to claim CRV tokens
+"""
+
+
+@external
+def mint(gauge_addr: address):
+    ...
+
+
+@external
+def mint_for(gauge_addr: address, _for: address):
+    ...

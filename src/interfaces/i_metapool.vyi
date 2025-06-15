@@ -55,9 +55,11 @@ def base_pool() -> address:
 def coins(i: uint256) -> address:
     ...
 
+
 @external
 def exchange(i: int128, j: int128, dx: uint256, min_dy: uint256) -> uint256:
     ...
+
 
 @external
 @view

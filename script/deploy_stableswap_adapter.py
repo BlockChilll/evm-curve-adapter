@@ -7,8 +7,9 @@ from src import stableswap_adapter
 def deploy_stableswap_adapter() -> VyperContract:
     active_network = get_active_network()
     meta_registry = active_network.manifest_named("meta_registry")
+    minter = active_network.manifest_named("minter")
 
-    stableswap_adapter_contract = stableswap_adapter.deploy(meta_registry)
+    stableswap_adapter_contract = stableswap_adapter.deploy(meta_registry, minter)
 
     print(f"Deployed StableswapAdapter contract at {stableswap_adapter_contract.address}")
     return stableswap_adapter_contract

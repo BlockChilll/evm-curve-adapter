@@ -8,6 +8,7 @@
 There are two types of stableswaps: base pool and metapool
 Both can be used for adding/removing liquidity, exchanging tokens
 Both have gauge contract to stake lp tokens and earn CRV tokens
+CRV tokens can be claimed from minter (CRV emission rewards) and gauge (permissionless rewards)
 Metapool has zapper contract as well, but we do not use them in this contract
 """
 
@@ -15,6 +16,8 @@ from snekmate.auth import ownable
 from interfaces import i_basepool
 from interfaces import i_metapool
 from interfaces import i_meta_registry
+from interfaces import i_minter
+from interfaces import i_gauge
 from libraries import stableswap_liquidity
 from ethereum.ercs import IERC20
 
@@ -60,6 +63,8 @@ MAX_COINS: constant(uint256) = 8
 POOLS_CAP: constant(uint256) = 1000
 # meta registry address used to validate pools and their types
 meta_registry: public(immutable(i_meta_registry))
+# minter address used to claim CRV rewards
+minter: public(immutable(i_minter))
 
 # registry of pools
 pool_registry: public(HashMap[address, Pool])
@@ -119,15 +124,28 @@ event Exchange:
     amount_in: uint256
     min_amount_out: uint256
     out_amount: uint256
-    
+
+
+# Emitted when liquidity is deposited for CRV tokens
+event LiquidityDepositedForCrv:
+    pool: indexed(address)
+    lp_amount: uint256
+
+
+# Emitted when CRV rewards are claimed
+event CrvRewardsClaimed:
+    pool: indexed(address)
+
+
 # ------------------------------------------------------------------
 #                            FUNCTIONS
 # ------------------------------------------------------------------
 
 @deploy
-def __init__(_meta_registry: address):
+def __init__(_meta_registry: address, _minter: address):
     ownable.__init__()
     meta_registry = i_meta_registry(_meta_registry)
+    minter = i_minter(_minter)
 
 
 # ------------------------------------------------------------------
@@ -490,7 +508,6 @@ def remove_liquidity_imbalance(
             assert convert(
                 response_t, bool
             ), "stableswap_adapter: failed to transfer coins"
-
     log LiquidityRemovedImbalanced(
         pool=pool_address,
         amounts=amounts,
@@ -569,7 +586,6 @@ def remove_liquidity_one_coin(
             assert convert(
                 response_t, bool
             ), "stableswap_adapter: failed to transfer coins"
-
     log LiquidityRemovedOneCoin(
         pool=pool_address,
         coin_index=coin_index,
@@ -600,12 +616,18 @@ def exchange(
 
     pool_info: Pool = self.pool_registry[pool_address]
 
-    assert index_in >= convert(0, int128) and index_in < convert(pool_info.n_coins, int128), "stableswap_adapter: index in out of bounds"
-    assert index_out >= convert(0, int128) and index_out < convert(pool_info.n_coins, int128), "stableswap_adapter: index out out of bounds"
-    assert index_in != index_out, "stableswap_adapter: index in and index out cannot be the same"
-    
+    assert index_in >= convert(0, int128) and index_in < convert(
+        pool_info.n_coins, int128
+    ), "stableswap_adapter: index in out of bounds"
+    assert index_out >= convert(0, int128) and index_out < convert(
+        pool_info.n_coins, int128
+    ), "stableswap_adapter: index out out of bounds"
+    assert (
+        index_in != index_out
+    ), "stableswap_adapter: index in and index out cannot be the same"
+
     coins: address[MAX_COINS] = staticcall meta_registry.get_coins(pool_address)
-    
+
     response_tf: Bytes[32] = raw_call(
         coins[index_in],
         abi_encode(
@@ -635,14 +657,22 @@ def exchange(
             response_t, bool
         ), "stableswap_adapter: failed to transfer coins"
 
-    out_token_balance_before: uint256 = staticcall IERC20(coins[index_out]).balanceOf(self)
+    out_token_balance_before: uint256 = staticcall IERC20(
+        coins[index_out]
+    ).balanceOf(self)
 
     if pool_info.pool_type == PoolType.BASE:
-        extcall i_basepool(pool_info.contract).exchange(index_in, index_out, amount_in, min_amount_out)
+        extcall i_basepool(pool_info.contract).exchange(
+            index_in, index_out, amount_in, min_amount_out
+        )
     else:
-        extcall i_metapool(pool_info.contract).exchange(index_in, index_out, amount_in, min_amount_out)
+        extcall i_metapool(pool_info.contract).exchange(
+            index_in, index_out, amount_in, min_amount_out
+        )
 
-    out_token_balance_after: uint256 = staticcall IERC20(coins[index_out]).balanceOf(self)
+    out_token_balance_after: uint256 = staticcall IERC20(
+        coins[index_out]
+    ).balanceOf(self)
 
     out_amount: uint256 = out_token_balance_after - out_token_balance_before
 
@@ -660,7 +690,6 @@ def exchange(
             assert convert(
                 response_t_out, bool
             ), "stableswap_adapter: failed to transfer coins"
-
     log Exchange(
         pool=pool_address,
         index_in=index_in,
@@ -668,6 +697,77 @@ def exchange(
         amount_in=amount_in,
         min_amount_out=min_amount_out,
         out_amount=out_amount,
+    )
+
+
+@external
+@nonreentrant
+def deposit_lp_for_crv(pool_address: address, lp_amount: uint256):
+    """
+    @notice Deposit lp tokens for CRV tokens
+    @param pool_address address of the pool contract
+    @param lp_amount amount of lp tokens to deposit
+    notice Required msg.sender to have approved this contract to deposit lp tokens to gauge
+    msg.sender should call 'def set_approve_deposit(addr: address, can_deposit: bool)' from gauge contract
+    to allow this contract to deposit lp tokens to gauge
+    """
+    self._check_is_pool_valid(pool_address)
+
+    pool_info: Pool = self.pool_registry[pool_address]
+
+    response_tf: Bytes[32] = raw_call(
+        pool_info.lp_token,
+        abi_encode(
+            msg.sender,
+            self,
+            lp_amount,
+            method_id=method_id("transferFrom(address,address,uint256)"),
+        ),
+        max_outsize=32,
+    )
+    if len(response_tf) > 0:
+        assert convert(
+            response_tf, bool
+        ), "stableswap_adapter: failed to transfer coins"
+
+    response_a: Bytes[32] = raw_call(
+        pool_info.lp_token,
+        abi_encode(
+            pool_info.gauge,
+            lp_amount,
+            method_id=method_id("approve(address,uint256)"),
+        ),
+        max_outsize=32,
+    )
+    if len(response_a) > 0:
+        assert convert(
+            response_a, bool
+        ), "stableswap_adapter: failed to transfer coins"
+
+    extcall i_gauge(pool_info.gauge).deposit(lp_amount, msg.sender)
+
+    log LiquidityDepositedForCrv(
+        pool=pool_address,
+        lp_amount=lp_amount,
+    )
+
+
+@external
+def claim_crv_rewards(pool_address: address):
+    """
+    @notice Claim CRV rewards from minter and gauge
+    @param pool_address address of the pool contract
+    Required msg.sender to have approved this contract to claim CRV rewards from minter
+    msg.sender should call 'def toggle_approve_mint(minting_user: address)' from minter contract
+    """
+    self._check_is_pool_valid(pool_address)
+
+    pool_info: Pool = self.pool_registry[pool_address]
+
+    extcall minter.mint_for(pool_info.gauge, msg.sender)
+
+    log CrvRewardsClaimed(
+        pool=pool_address,
     )
 
 
@@ -695,17 +795,28 @@ def get_exchange_amount_out(
 
     pool_info: Pool = self.pool_registry[pool_address]
 
-    assert index_in >= convert(0, int128) and index_in < convert(pool_info.n_coins, int128), "stableswap_adapter: index in out of bounds"
-    assert index_out >= convert(0, int128) and index_out < convert(pool_info.n_coins, int128), "stableswap_adapter: index out out of bounds"
-    assert index_in != index_out, "stableswap_adapter: index in and index out cannot be the same"
+    assert index_in >= convert(0, int128) and index_in < convert(
+        pool_info.n_coins, int128
+    ), "stableswap_adapter: index in out of bounds"
+    assert index_out >= convert(0, int128) and index_out < convert(
+        pool_info.n_coins, int128
+    ), "stableswap_adapter: index out out of bounds"
+    assert (
+        index_in != index_out
+    ), "stableswap_adapter: index in and index out cannot be the same"
 
-    out_amount: uint256 = 0 
+    out_amount: uint256 = 0
     if pool_info.pool_type == PoolType.BASE:
-        out_amount = staticcall i_basepool(pool_info.contract).get_dy(index_in, index_out, amount_in)
+        out_amount = staticcall i_basepool(pool_info.contract).get_dy(
+            index_in, index_out, amount_in
+        )
     else:
-        out_amount = staticcall i_metapool(pool_info.contract).get_dy(index_in, index_out, amount_in)
-    
+        out_amount = staticcall i_metapool(pool_info.contract).get_dy(
+            index_in, index_out, amount_in
+        )
+
     return out_amount
+
 
 @external
 @view

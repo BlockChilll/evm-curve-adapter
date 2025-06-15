@@ -690,7 +690,124 @@ def test_get_exchange_amount_out_successfully_meta_pool(stableswap_adapter, alic
 
     assert out_amount > 0
 
-    
+
+# ------------------------------------------------------------------
+#                DEPOSIT_LP_FOR_CRV FUNCTION TESTS
+# ------------------------------------------------------------------
+
+def test_can_successfully_deposit_lp_for_crv_base_pool(stableswap_adapter, alice, three_pool_contract, three_pool_lp_token, three_pool_gauge, dai, usdc, usdt):
+    register_three_pool(stableswap_adapter, alice, three_pool_contract)
+    mint_three_pool_tokens(alice, dai, usdc, usdt)
+    three_pool_gauge.set_approve_deposit(stableswap_adapter, True)
+
+    AMOUNT_TO_ADD: int = int(100e18) # DAI
+    AMOUNT_TO_ADD_2: int = int(200e6) # USDC
+    AMOUNT_TO_ADD_3: int = int(300e6) # USDT
+
+    with boa.env.prank(alice):
+        dai.approve(stableswap_adapter, AMOUNT_TO_ADD)
+        usdc.approve(stableswap_adapter, AMOUNT_TO_ADD_2)
+        usdt.approve(stableswap_adapter, AMOUNT_TO_ADD_3)
+
+        mint_amount: int = stableswap_adapter.add_liquidity(three_pool_contract, [AMOUNT_TO_ADD, AMOUNT_TO_ADD_2, AMOUNT_TO_ADD_3], 0)
+
+        assert three_pool_lp_token.balanceOf(alice) == mint_amount
+        print(f"three_pool_lp_token.balanceOf(alice): {three_pool_lp_token.balanceOf(alice)}")
+
+        three_pool_lp_token.approve(stableswap_adapter, mint_amount)
+        three_pool_gauge.set_approve_deposit(stableswap_adapter, True)
+
+        stableswap_adapter.deposit_lp_for_crv(three_pool_contract, mint_amount)
+
+        assert three_pool_lp_token.balanceOf(alice) == 0
+        assert three_pool_gauge.balanceOf(alice) == mint_amount
+
+    logs = stableswap_adapter.get_logs()
+    log = logs[len(logs) - 1]
+
+    assert log.pool == three_pool_contract.address
+    assert log.lp_amount == mint_amount
+
+
+def test_can_successfully_deposit_lp_for_crv_meta_pool(stableswap_adapter, alice, musd_three_pool_contract, musd_three_pool_gauge, musd_three_pool_lp_token, musd, three_crv):
+    register_musd_three_pool(stableswap_adapter, alice, musd_three_pool_contract, musd_three_pool_gauge)
+    mint_musd_three_pool_tokens(alice, musd, three_crv)
+
+    AMOUNT_TO_ADD: int = int(100e18) # MUSD
+    AMOUNT_TO_ADD_2: int = int(200e18) # THREE_CRV
+
+    with boa.env.prank(alice):
+        musd.approve(stableswap_adapter, AMOUNT_TO_ADD)
+        three_crv.approve(stableswap_adapter, AMOUNT_TO_ADD_2)
+
+        mint_amount: int = stableswap_adapter.add_liquidity(musd_three_pool_contract, [AMOUNT_TO_ADD, AMOUNT_TO_ADD_2], 0)
+        
+        assert musd_three_pool_lp_token.balanceOf(alice) == mint_amount
+        print(f"musd_three_pool_lp_token.balanceOf(alice): {musd_three_pool_lp_token.balanceOf(alice)}")
+
+        musd_three_pool_lp_token.approve(stableswap_adapter, mint_amount)
+        musd_three_pool_gauge.set_approve_deposit(stableswap_adapter, True)
+
+        stableswap_adapter.deposit_lp_for_crv(musd_three_pool_contract, mint_amount)
+
+        assert musd_three_pool_lp_token.balanceOf(alice) == 0
+        assert musd_three_pool_gauge.balanceOf(alice) == mint_amount
+
+    logs = stableswap_adapter.get_logs()
+    log = logs[len(logs) - 1]
+
+    assert log.pool == musd_three_pool_contract.address
+    assert log.lp_amount == mint_amount
+
+# ------------------------------------------------------------------
+#                 CLAIM_CRV_REWARDS FUNCTION TESTS
+# ------------------------------------------------------------------
+
+def test_can_successfully_claim_crv_rewards_base_pool(stableswap_adapter, alice, three_pool_contract, three_pool_lp_token, three_pool_gauge, dai, usdc, usdt, minter, crv):
+    register_three_pool(stableswap_adapter, alice, three_pool_contract)
+    mint_three_pool_tokens(alice, dai, usdc, usdt)
+    three_pool_gauge.set_approve_deposit(stableswap_adapter, True)
+
+    AMOUNT_TO_ADD: int = int(100e18) # DAI
+    AMOUNT_TO_ADD_2: int = int(200e6) # USDC
+    AMOUNT_TO_ADD_3: int = int(300e6) # USDT
+
+    with boa.env.prank(alice):
+        dai.approve(stableswap_adapter, AMOUNT_TO_ADD)
+        usdc.approve(stableswap_adapter, AMOUNT_TO_ADD_2)
+        usdt.approve(stableswap_adapter, AMOUNT_TO_ADD_3)
+
+        mint_amount: int = stableswap_adapter.add_liquidity(three_pool_contract, [AMOUNT_TO_ADD, AMOUNT_TO_ADD_2, AMOUNT_TO_ADD_3], 0)
+
+        assert three_pool_lp_token.balanceOf(alice) == mint_amount
+        print(f"three_pool_lp_token.balanceOf(alice): {three_pool_lp_token.balanceOf(alice)}")
+
+        three_pool_lp_token.approve(stableswap_adapter, mint_amount)
+        three_pool_gauge.set_approve_deposit(stableswap_adapter, True)
+
+        stableswap_adapter.deposit_lp_for_crv(three_pool_contract, mint_amount)
+
+        minter.toggle_approve_mint(stableswap_adapter)
+
+        crv_balance_before: int = crv.balanceOf(alice)
+        print(f"crv_balance_before: {crv_balance_before}")
+
+        # boa.env.time_travel(boa.env.timestamp + 1)
+
+        stableswap_adapter.claim_crv_rewards(three_pool_contract)
+
+        crv_balance_after: int = crv.balanceOf(alice)
+        print(f"crv_balance_after: {crv_balance_after}")
+
+
+    logs = stableswap_adapter.get_logs()
+    log = logs[len(logs) - 1]
+
+    assert log.pool == three_pool_contract.address
+
+
+
+
 # ------------------------------------------------------------------
 #                      UTIL FUNCTIONS
 # ------------------------------------------------------------------

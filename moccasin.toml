@@ -32,6 +32,8 @@ USDC = { abi = "abis/usdc.json" }
 USDT = { abi = "abis/usdt.json" }
 MUSD = { abi = "abis/musd.json" }
 THREE_CRV = { abi = "abis/3crv.json" }
+minter = { abi = "abis/minter.json" }
+CRV = { abi = "abis/crv.json" }
 
 [networks.contracts.stableswap_adapter]
 deployer_script = "script/deploy_stableswap_adapter.py"
@@ -50,6 +52,8 @@ USDC = { address = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48" }
 USDT = { address = "0xdAC17F958D2ee523a2206206994597C13D831ec7" }
 MUSD = { address = "0xe2f2a5C287993345a840Db3B0845fbC70f5935a5" }
 THREE_CRV = { address = "0x6c3F90f043a72FA612cbac8115EE7e52BDe6E490" }
+CRV = { address = "0xD533a949740bb3306d119CC777fa900bA034cd52" }
+minter = { address = "0xd061D61a4d941c39E5453435B6345Dc261C2fcE0" }
 
 
 # [networks.pyevm]
