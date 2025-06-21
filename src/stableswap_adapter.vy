@@ -9,6 +9,7 @@ There are two types of stableswaps: base pool and metapool
 Both can be used for adding/removing liquidity, exchanging tokens
 Both have gauge contract to stake lp tokens and earn CRV tokens
 CRV tokens can be claimed from minter (CRV emission rewards) and gauge (permissionless rewards)
+In this contract we allow claiming CRV rewards from minter only.
 Metapool has zapper contract as well, but we do not use them in this contract
 """
 
@@ -755,7 +756,7 @@ def deposit_lp_for_crv(pool_address: address, lp_amount: uint256):
 @external
 def claim_crv_rewards(pool_address: address):
     """
-    @notice Claim CRV rewards from minter and gauge
+    @notice Claim CRV rewards from minter
     @param pool_address address of the pool contract
     Required msg.sender to have approved this contract to claim CRV rewards from minter
     msg.sender should call 'def toggle_approve_mint(minting_user: address)' from minter contract
