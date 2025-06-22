@@ -711,6 +711,7 @@ def deposit_lp_for_crv(pool_address: address, lp_amount: uint256):
     notice Required msg.sender to have approved this contract to deposit lp tokens to gauge
     msg.sender should call 'def set_approve_deposit(addr: address, can_deposit: bool)' from gauge contract
     to allow this contract to deposit lp tokens to gauge
+    Withdrawal should be done directly from gauge contract by user
     """
     self._check_is_pool_valid(pool_address)
 

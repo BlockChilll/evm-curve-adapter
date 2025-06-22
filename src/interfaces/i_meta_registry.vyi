@@ -40,3 +40,9 @@ def get_n_coins(_pool: address, _handler_id: uint256 = 0) -> uint256:
 @view
 def get_coins(_pool: address, _handler_id: uint256 = 0) -> address[8]:
     ...
+
+
+@external
+@view
+def get_n_underlying_coins(_pool: address, _handler_id: uint256 = 0) -> uint256:
+    ...

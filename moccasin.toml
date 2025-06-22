@@ -20,6 +20,17 @@ block_identifier=22687201
 
 [networks.contracts]
 meta_registry = { abi = "abis/meta_registry.json" }
+minter = { abi = "abis/minter.json" }
+DAI = { abi = "abis/dai.json" }
+USDC = { abi = "abis/usdc.json" }
+USDT = { abi = "abis/usdt.json" }
+MUSD = { abi = "abis/musd.json" }
+THREE_CRV = { abi = "abis/3crv.json" }
+CRV = { abi = "abis/crv.json" }
+WBTC = { abi = "abis/wbtc.json" }
+STG = { abi = "abis/stg.json" }
+ETH = { abi = "abis/eth.json" }
+# stableswap contracts
 three_pool_contract = { abi = "abis/three_pool_contract.json" }
 three_pool_gauge = { abi = "abis/three_pool_gauge.json" }
 three_pool_lp_token = { abi = "abis/three_pool_lp_token.json" }
@@ -27,19 +38,33 @@ musd_three_pool_contract = { abi = "abis/musd_three_pool_contract.json" }
 musd_three_pool_gauge = { abi = "abis/musd_three_pool_gauge.json" }
 musd_three_pool_lp_token = { abi = "abis/musd_three_pool_lp_token.json" }
 musd_three_pool_zapper = { abi = "abis/musd_three_pool_zapper.json" }
-DAI = { abi = "abis/dai.json" }
-USDC = { abi = "abis/usdc.json" }
-USDT = { abi = "abis/usdt.json" }
-MUSD = { abi = "abis/musd.json" }
-THREE_CRV = { abi = "abis/3crv.json" }
-minter = { abi = "abis/minter.json" }
-CRV = { abi = "abis/crv.json" }
+# cryptoswap contracts
+usdc_wbtc_eth_pool_contract = { abi = "abis/usdc_wbtc_eth_pool_contract.json" }
+usdc_wbtc_eth_pool_gauge = { abi = "abis/usdc_wbtc_eth_pool_gauge.json" }
+usdc_wbtc_eth_pool_lp_token = { abi = "abis/usdc_wbtc_eth_pool_lp_token.json" }
+stg_usdc_pool_contract = { abi = "abis/stg_usdc_pool_contract.json" }
+stg_usdc_pool_gauge = { abi = "abis/stg_usdc_pool_gauge.json" }
+stg_usdc_pool_lp_token = { abi = "abis/stg_usdc_pool_lp_token.json" }
 
 [networks.contracts.stableswap_adapter]
 deployer_script = "script/deploy_stableswap_adapter.py"
 
+[networks.contracts.cryptoswap_adapter]
+deployer_script = "script/deploy_cryptoswap_adapter.py"
+
 [networks.eth-forked.contracts]
 meta_registry = { address = "0xF98B45FA17DE75FB1aD0e7aFD971b0ca00e379fC" }
+minter = { address = "0xd061D61a4d941c39E5453435B6345Dc261C2fcE0" }
+DAI = { address = "0x6B175474E89094C44Da98b954EedeAC495271d0F" }
+USDC = { address = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48" }
+USDT = { address = "0xdAC17F958D2ee523a2206206994597C13D831ec7" }
+MUSD = { address = "0xe2f2a5C287993345a840Db3B0845fbC70f5935a5" }
+THREE_CRV = { address = "0x6c3F90f043a72FA612cbac8115EE7e52BDe6E490" }
+CRV = { address = "0xD533a949740bb3306d119CC777fa900bA034cd52" }
+WBTC = { address = "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599" }
+ETH = { address = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2" }
+STG = { address = "0xAf5191B0De278C7286d6C7CC6ab6BB8A73bA2Cd6" }
+# stableswap contracts
 three_pool_contract = { address = "0xbebc44782c7db0a1a60cb6fe97d0b483032ff1c7" }
 three_pool_gauge = { address = "0xbFcF63294aD7105dEa65aA58F8AE5BE2D9d0952A" }
 three_pool_lp_token = { address = "0x6c3F90f043a72FA612cbac8115EE7e52BDe6E490" }
@@ -47,14 +72,13 @@ musd_three_pool_contract = { address = "0x8474DdbE98F5aA3179B3B3F5942D724aFcdec9
 musd_three_pool_gauge = { address = "0x5f626c30EC1215f4EdCc9982265E8b1F411D1352" }
 musd_three_pool_lp_token = { address = "0x1AEf73d49Dedc4b1778d0706583995958Dc862e6" }
 musd_three_pool_zapper = { address = "0x803A2B40c5a9BB2B86DD630B274Fa2A9202874C2" }
-DAI = { address = "0x6B175474E89094C44Da98b954EedeAC495271d0F" }
-USDC = { address = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48" }
-USDT = { address = "0xdAC17F958D2ee523a2206206994597C13D831ec7" }
-MUSD = { address = "0xe2f2a5C287993345a840Db3B0845fbC70f5935a5" }
-THREE_CRV = { address = "0x6c3F90f043a72FA612cbac8115EE7e52BDe6E490" }
-CRV = { address = "0xD533a949740bb3306d119CC777fa900bA034cd52" }
-minter = { address = "0xd061D61a4d941c39E5453435B6345Dc261C2fcE0" }
-
+# cryptoswap contracts
+usdc_wbtc_eth_pool_contract = { address = "0x7F86Bf177Dd4F3494b841a37e810A34dD56c829B" }
+usdc_wbtc_eth_pool_gauge = { address = "0x85D44861D024CB7603Ba906F2Dc9569fC02083F6" }
+usdc_wbtc_eth_pool_lp_token = { address = "0x7F86Bf177Dd4F3494b841a37e810A34dD56c829B" }
+stg_usdc_pool_contract = { address = "0x3211C6cBeF1429da3D0d58494938299C92Ad5860" }
+stg_usdc_pool_gauge = { address = "0x95d16646311fDe101Eb9F897fE06AC881B7Db802" }
+stg_usdc_pool_lp_token = { address = "0xdf55670e27bE5cDE7228dD0A6849181891c9ebA1" }
 
 # [networks.pyevm]
 # is_zksync = false

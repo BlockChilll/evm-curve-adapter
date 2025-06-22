@@ -1,0 +1,11 @@
+# pragma version 0.4.1
+# @license MIT
+
+"""
+@notice common interface for cryptoswap gauges
+"""
+
+
+@external
+def deposit(_value: uint256, _addr: address):
+    ...

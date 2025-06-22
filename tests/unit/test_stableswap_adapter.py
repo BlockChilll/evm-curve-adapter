@@ -698,7 +698,6 @@ def test_get_exchange_amount_out_successfully_meta_pool(stableswap_adapter, alic
 def test_can_successfully_deposit_lp_for_crv_base_pool(stableswap_adapter, alice, three_pool_contract, three_pool_lp_token, three_pool_gauge, dai, usdc, usdt):
     register_three_pool(stableswap_adapter, alice, three_pool_contract)
     mint_three_pool_tokens(alice, dai, usdc, usdt)
-    three_pool_gauge.set_approve_deposit(stableswap_adapter, True)
 
     AMOUNT_TO_ADD: int = int(100e18) # DAI
     AMOUNT_TO_ADD_2: int = int(200e6) # USDC
