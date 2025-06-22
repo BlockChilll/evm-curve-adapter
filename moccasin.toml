@@ -15,8 +15,8 @@ dependencies = ["snekmate"]
 fork = true
 url = "$MAINNET_RPC_URL"
 default_account_name = "anvil1"
-unsafe_password_file = "./pswd"
 block_identifier=22687201
+unsafe_password_file = "./pswd"
 
 [networks.contracts]
 meta_registry = { abi = "abis/meta_registry.json" }
